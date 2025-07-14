@@ -3,6 +3,9 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import pneuForteLogo from '../assets/logo.png'; // Verifique se esse caminho está correto
 
+// PEGANDO A VARIÁVEL DE AMBIENTE
+const API_URL = import.meta.env.VITE_API_URL;
+
 export default function Login() {
   const navigate = useNavigate();
   const [usuario, setUsuario] = useState('');
@@ -14,7 +17,7 @@ export default function Login() {
     setErro('');
 
     try {
-      const { data } = await axios.post('http://localhost:3001/api/login', {
+      const { data } = await axios.post(`${API_URL}/login`, {
         usuario,
         senha,
       });
