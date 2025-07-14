@@ -5,7 +5,7 @@ const fs = require('fs');
 const notaRoutes = require('./routes/notaRoutes');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001; // <-- Porta dinâmica para Render
 
 // Middlewares
 app.use(cors());
@@ -34,5 +34,5 @@ app.use((req, res, next) => {
 
 // Iniciar servidor
 app.listen(PORT, () => {
-  console.log(`✅ Servidor rodando em http://localhost:${PORT}`);
+  console.log(`✅ Servidor rodando na porta ${PORT}`);
 });
