@@ -127,13 +127,13 @@ export default function LeitorNota() {
   const iniciarCamera = async () => {
     setCameraAtiva(true);
     const codeReader = new BrowserMultiFormatReader();
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: 'environment',
+          facingMode: { exact: 'environment' },
           width: { ideal: 1280 },
-          height: { ideal: 720 },
-          zoom: false
+          height: { ideal: 720 }
         }
       });
 
