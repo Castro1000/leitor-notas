@@ -5,7 +5,7 @@ const fs = require('fs');
 const notaRoutes = require('./routes/notaRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 3001; // <-- Porta dinâmica para Render
+const PORT = process.env.PORT || 3001; // Porta dinâmica para Render
 
 // Middlewares
 app.use(cors());
@@ -14,8 +14,8 @@ app.use(express.json());
 // Rotas da API
 app.use('/api', notaRoutes);
 
-// Servir arquivos estáticos do frontend (pasta dist)
-const distPath = path.join(__dirname, 'dist');
+// Servir arquivos estáticos do frontend (pasta frontend/dist)
+const distPath = path.join(__dirname, '../frontend/dist');
 app.use(express.static(distPath));
 
 // Rota para SPA: sempre entregar index.html se a rota não começar com /api
