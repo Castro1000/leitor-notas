@@ -20,7 +20,7 @@ export default function LeitorNota() {
   const bip = new Audio('/beep.mp3');
 
   useEffect(() => {
-    inputRef.current.focus();
+    inputRef.current?.focus();
   }, []);
 
   const handleLogout = () => {
@@ -74,7 +74,6 @@ export default function LeitorNota() {
 
     } catch (error) {
       const data = error.response?.data;
-
       if (data?.nota) {
         const notaRecebida = data.nota;
         setNota(notaRecebida);
@@ -99,20 +98,15 @@ export default function LeitorNota() {
           setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
           setMensagemFluxo('🟡 Aguardando setor de LOGÍSTICA bipar a nota.');
         }
-
-      } else if (data?.message) {
-        setMensagem(`⚠️ ${data.message}`);
-        setMensagemTipo('erro');
-        setMensagemFluxo('');
       } else {
-        setMensagem('❌ Erro ao processar a chave');
+        setMensagem(data?.message ? `⚠️ ${data.message}` : '❌ Erro ao processar a chave');
         setMensagemTipo('erro');
         setMensagemFluxo('');
       }
     }
   };
 
-  const handleLeitura = async (e) => {
+  const handleLeitura = (e) => {
     if (e.key === 'Enter') {
       const chave = e.target.value.trim();
       inputRef.current.value = '';
@@ -124,15 +118,20 @@ export default function LeitorNota() {
     }
   };
 
-      const iniciarCamera = async () => {
-      setCameraAtiva(true);
-      const codeReader = new BrowserMultiFormatReader();
+  const iniciarCamera = async () => {
+    setCameraAtiva(true);
+    const codeReader = new BrowserMultiFormatReader();
 
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'environment' }
-          });
+    try {
+      const constraints = {
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
 
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       videoRef.current.srcObject = stream;
       videoRef.current.setAttribute('playsinline', true);
       await videoRef.current.play();
@@ -152,7 +151,6 @@ export default function LeitorNota() {
       setCameraAtiva(false);
     }
   };
-
 
   const pararCamera = () => {
     setCameraAtiva(false);
@@ -206,8 +204,7 @@ export default function LeitorNota() {
           {mensagem && (
             <div style={{
               ...styles.mensagem,
-              backgroundColor:
-                mensagemTipo === 'erro' ? '#800000' :
+              backgroundColor: mensagemTipo === 'erro' ? '#800000' :
                 mensagemTipo === 'finalizada' ? '#004d00' : '#333',
               color: mensagemTipo === 'finalizada' ? '#00FF99' : '#FFD700'
             }}>
@@ -250,9 +247,6 @@ const styles = {
   statusTexto: { marginLeft: 10, color: '#00FF99', fontWeight: 'bold' },
   botaoFinalizar: { marginTop: 20, width: '100%', padding: '14px', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '17px', cursor: 'pointer' },
   cameraTelaCheia: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
-  video: { width: '100%', height: '100%', objectFit: 'cover' },
+  video: { width: '100%', height: '100%', objectFit: 'contain' },
   botaoFechar: { position: 'absolute', top: 20, right: 20, padding: '12px', backgroundColor: '#e60000', color: '#fff', fontSize: '18px', borderRadius: '10px', border: 'none', fontWeight: 'bold' },
 };
-
-
-// teste ajuste
