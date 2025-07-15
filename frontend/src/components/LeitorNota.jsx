@@ -253,3 +253,6 @@ const styles = {
   video: { width: '100%', height: '100%', objectFit: 'cover' },
   botaoFechar: { position: 'absolute', top: 20, right: 20, padding: '12px', backgroundColor: '#e60000', color: '#fff', fontSize: '18px', borderRadius: '10px', border: 'none', fontWeight: 'bold' },
 };
+
+
+// teste ajuste
