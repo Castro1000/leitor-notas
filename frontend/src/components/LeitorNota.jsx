@@ -124,18 +124,14 @@ export default function LeitorNota() {
     }
   };
 
-  const iniciarCamera = async () => {
-    setCameraAtiva(true);
-    const codeReader = new BrowserMultiFormatReader();
+      const iniciarCamera = async () => {
+      setCameraAtiva(true);
+      const codeReader = new BrowserMultiFormatReader();
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { exact: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      });
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' }
+          });
 
       videoRef.current.srcObject = stream;
       videoRef.current.setAttribute('playsinline', true);
@@ -145,8 +141,8 @@ export default function LeitorNota() {
         if (result) {
           const text = result.getText();
           if (text.length === 44) {
-            pararCamera();
             bip.play();
+            pararCamera();
             processarChave(text);
           }
         }
@@ -156,6 +152,7 @@ export default function LeitorNota() {
       setCameraAtiva(false);
     }
   };
+
 
   const pararCamera = () => {
     setCameraAtiva(false);
