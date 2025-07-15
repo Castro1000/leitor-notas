@@ -128,10 +128,17 @@ export default function LeitorNota() {
     setCameraAtiva(true);
     const codeReader = new BrowserMultiFormatReader();
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+
       videoRef.current.srcObject = stream;
       videoRef.current.setAttribute('playsinline', true);
-      videoRef.current.play();
+      await videoRef.current.play();
 
       codeReader.decodeFromVideoElement(videoRef.current, (result, err) => {
         if (result) {
