@@ -119,38 +119,40 @@ export default function LeitorNota() {
   };
 
   const iniciarCamera = async () => {
-    setCameraAtiva(true);
-    const codeReader = new BrowserMultiFormatReader();
+  setCameraAtiva(true);
+  const codeReader = new BrowserMultiFormatReader();
 
-    try {
-      const constraints = {
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+  try {
+    const constraints = {
+      video: {
+        facingMode: { exact: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        advanced: [{ focusMode: 'continuous' }]
+      }
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    videoRef.current.srcObject = stream;
+    videoRef.current.setAttribute('playsinline', true);
+    await videoRef.current.play();
+
+    codeReader.decodeFromVideoElement(videoRef.current, (result, err) => {
+      if (result) {
+        const text = result.getText();
+        if (text.length === 44) {
+          bip.play();
+          pararCamera();
+          processarChave(text);
         }
-      };
+      }
+    });
+  } catch (err) {
+    console.error('Erro ao acessar câmera:', err);
+    setCameraAtiva(false);
+  }
+};
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      videoRef.current.srcObject = stream;
-      videoRef.current.setAttribute('playsinline', true);
-      await videoRef.current.play();
-
-      codeReader.decodeFromVideoElement(videoRef.current, (result, err) => {
-        if (result) {
-          const text = result.getText();
-          if (text.length === 44) {
-            bip.play();
-            pararCamera();
-            processarChave(text);
-          }
-        }
-      });
-    } catch (err) {
-      console.error('Erro ao acessar câmera:', err);
-      setCameraAtiva(false);
-    }
-  };
 
   const pararCamera = () => {
     setCameraAtiva(false);
@@ -250,3 +252,5 @@ const styles = {
   video: { width: '100%', height: '100%', objectFit: 'contain' },
   botaoFechar: { position: 'absolute', top: 20, right: 20, padding: '12px', backgroundColor: '#e60000', color: '#fff', fontSize: '18px', borderRadius: '10px', border: 'none', fontWeight: 'bold' },
 };
+
+
