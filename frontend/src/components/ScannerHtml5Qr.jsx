@@ -10,7 +10,7 @@ export default function ScannerHtml5Qr({ onResult, onClose }) {
     const iniciarScanner = async () => {
       const config = {
         fps: 10,
-        qrbox: { width: 320, height: 90 }, // Faixa horizontal como leitores de boleto
+        qrbox: { width: 320, height: 90 }, // Estilo "bipador"
         aspectRatio: 1.7777778, // 16:9
         disableFlip: true,
         rememberLastUsedCamera: true
@@ -20,33 +20,38 @@ export default function ScannerHtml5Qr({ onResult, onClose }) {
 
       try {
         const cameras = await Html5Qrcode.getCameras();
+        let cameraConfig;
+
         if (cameras && cameras.length > 0) {
           const backCamera = cameras.find(cam =>
-            cam.label.toLowerCase().includes('back') || cam.label.toLowerCase().includes('traseira')
+            cam.label.toLowerCase().includes('back') ||
+            cam.label.toLowerCase().includes('traseira')
           ) || cameras[0];
 
-          await scannerRef.current.start(
-            { deviceId: backCamera.id },
-            config,
-            (decodedText) => {
-              if (decodedText.length === 44) {
-                beep.current.play();
-                scannerRef.current.stop().then(() => {
-                  onResult(decodedText);
-                });
-              }
-            },
-            (errorMsg) => {
-              // Ignore read errors
-            }
-          );
+          cameraConfig = { deviceId: { exact: backCamera.id } };
         } else {
-          alert('Nenhuma câmera encontrada.');
-          onClose();
+          // fallback para dispositivos que não retornam a lista de câmeras
+          cameraConfig = { facingMode: "environment" };
         }
+
+        await scannerRef.current.start(
+          cameraConfig,
+          config,
+          (decodedText) => {
+            if (decodedText.length === 44) {
+              beep.current.play();
+              scannerRef.current.stop().then(() => {
+                onResult(decodedText);
+              });
+            }
+          },
+          (errorMsg) => {
+            console.log("Erro de leitura:", errorMsg);
+          }
+        );
       } catch (err) {
         console.error('Erro ao iniciar scanner:', err);
-        alert('Erro ao acessar a câmera.');
+        alert('Erro ao acessar a câmera. Verifique permissões e tente outro navegador.');
         onClose();
       }
     };
