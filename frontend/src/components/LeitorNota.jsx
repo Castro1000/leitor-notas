@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { BrowserMultiFormatReader } from '@zxing/library';
+import ScannerHtml5Qr from './ScannerHtml5Qr';
 
 export default function LeitorNota() {
   const inputRef = useRef();
-  const videoRef = useRef();
   const [mensagem, setMensagem] = useState('');
   const [mensagemTipo, setMensagemTipo] = useState('info');
   const [mensagemFluxo, setMensagemFluxo] = useState('');
@@ -13,7 +12,7 @@ export default function LeitorNota() {
   const [status, setStatus] = useState('');
   const [mostrarBotaoFinalizarPH, setMostrarBotaoFinalizarPH] = useState(false);
   const [mostrarBotaoFinalizarContainer, setMostrarBotaoFinalizarContainer] = useState(false);
-  const [cameraAtiva, setCameraAtiva] = useState(false);
+  const [scannerAberto, setScannerAberto] = useState(false);
   const navigate = useNavigate();
   const usuario = JSON.parse(localStorage.getItem('usuarioLogado'))?.usuario || '';
 
@@ -118,50 +117,6 @@ export default function LeitorNota() {
     }
   };
 
-  const iniciarCamera = async () => {
-  setCameraAtiva(true);
-  const codeReader = new BrowserMultiFormatReader();
-
-  try {
-    const constraints = {
-      video: {
-        facingMode: { exact: 'environment' },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
-        advanced: [{ focusMode: 'continuous' }]
-      }
-    };
-
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    videoRef.current.srcObject = stream;
-    videoRef.current.setAttribute('playsinline', true);
-    await videoRef.current.play();
-
-    codeReader.decodeFromVideoElement(videoRef.current, (result, err) => {
-      if (result) {
-        const text = result.getText();
-        if (text.length === 44) {
-          bip.play();
-          pararCamera();
-          processarChave(text);
-        }
-      }
-    });
-  } catch (err) {
-    console.error('Erro ao acessar câmera:', err);
-    setCameraAtiva(false);
-  }
-};
-
-
-  const pararCamera = () => {
-    setCameraAtiva(false);
-    const stream = videoRef.current?.srcObject;
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-  };
-
   const finalizarNota = async () => {
     if (!nota?.id) return;
     await axios.put(`/api/finalizar-nota/${nota.id}`);
@@ -182,56 +137,59 @@ export default function LeitorNota() {
 
   return (
     <div style={styles.wrapper}>
-      {cameraAtiva ? (
-        <div style={styles.cameraTelaCheia}>
-          <video ref={videoRef} style={styles.video} />
-          <button onClick={pararCamera} style={styles.botaoFechar}>❌ Fechar Câmera</button>
-        </div>
-      ) : (
-        <div style={styles.container}>
-          <div style={styles.topBar}>
-            <h2 style={{ color: '#FFD700' }}>📦 Leitor de Notas Fiscais</h2>
-            <button onClick={handleLogout} style={styles.logoutButton}>🚪 Sair</button>
-          </div>
-          <p><span style={{ color: '#ccc' }}>Usuário:</span> <span style={{ color: '#FFD700' }}>{usuario.toUpperCase()}</span></p>
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Bipe ou escaneie a nota fiscal"
-            onKeyDown={handleLeitura}
-            style={styles.input}
-          />
-          <button onClick={iniciarCamera} style={styles.botaoCamera}>📷 Ler com Câmera</button>
-
-          {mensagem && (
-            <div style={{
-              ...styles.mensagem,
-              backgroundColor: mensagemTipo === 'erro' ? '#800000' :
-                mensagemTipo === 'finalizada' ? '#004d00' : '#333',
-              color: mensagemTipo === 'finalizada' ? '#00FF99' : '#FFD700'
-            }}>
-              {mensagem}
-            </div>
-          )}
-
-          {mensagemFluxo && <div style={styles.fluxoBox}>{mensagemFluxo}</div>}
-
-          {status && (
-            <div style={styles.statusBox}>
-              <strong>Status:</strong>{' '}
-              <span style={styles.statusTexto}>{status}</span>
-            </div>
-          )}
-
-          {mostrarBotaoFinalizarPH && usuario === 'ph' && (
-            <button style={styles.botaoFinalizar} onClick={finalizarNota}>✅ Finalizar Nota</button>
-          )}
-
-          {mostrarBotaoFinalizarContainer && usuario === 'logistica' && (
-            <button style={styles.botaoFinalizar} onClick={finalizarContainer}>📦 Finalizar Container</button>
-          )}
-        </div>
+      {scannerAberto && (
+        <ScannerHtml5Qr
+          onResult={(codigo) => {
+            setScannerAberto(false);
+            processarChave(codigo);
+          }}
+          onClose={() => setScannerAberto(false)}
+        />
       )}
+
+      <div style={styles.container}>
+        <div style={styles.topBar}>
+          <h2 style={{ color: '#FFD700' }}>📦 Leitor de Notas Fiscais</h2>
+          <button onClick={handleLogout} style={styles.logoutButton}>🚪 Sair</button>
+        </div>
+        <p><span style={{ color: '#ccc' }}>Usuário:</span> <span style={{ color: '#FFD700' }}>{usuario.toUpperCase()}</span></p>
+        <input
+          ref={inputRef}
+          type="text"
+          placeholder="Bipe ou escaneie a nota fiscal"
+          onKeyDown={handleLeitura}
+          style={styles.input}
+        />
+        <button onClick={() => setScannerAberto(true)} style={styles.botaoCamera}>📷 Ler com Câmera</button>
+
+        {mensagem && (
+          <div style={{
+            ...styles.mensagem,
+            backgroundColor: mensagemTipo === 'erro' ? '#800000' :
+              mensagemTipo === 'finalizada' ? '#004d00' : '#333',
+            color: mensagemTipo === 'finalizada' ? '#00FF99' : '#FFD700'
+          }}>
+            {mensagem}
+          </div>
+        )}
+
+        {mensagemFluxo && <div style={styles.fluxoBox}>{mensagemFluxo}</div>}
+
+        {status && (
+          <div style={styles.statusBox}>
+            <strong>Status:</strong>{' '}
+            <span style={styles.statusTexto}>{status}</span>
+          </div>
+        )}
+
+        {mostrarBotaoFinalizarPH && usuario === 'ph' && (
+          <button style={styles.botaoFinalizar} onClick={finalizarNota}>✅ Finalizar Nota</button>
+        )}
+
+        {mostrarBotaoFinalizarContainer && usuario === 'logistica' && (
+          <button style={styles.botaoFinalizar} onClick={finalizarContainer}>📦 Finalizar Container</button>
+        )}
+      </div>
     </div>
   );
 }
@@ -247,10 +205,5 @@ const styles = {
   fluxoBox: { marginTop: '12px', textAlign: 'center', background: '#101820', padding: '10px', borderRadius: '8px', fontSize: '16px', color: '#FFD700' },
   statusBox: { marginTop: '18px', padding: '12px', background: '#000', borderRadius: '8px', fontSize: '17px' },
   statusTexto: { marginLeft: 10, color: '#00FF99', fontWeight: 'bold' },
-  botaoFinalizar: { marginTop: 20, width: '100%', padding: '14px', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '17px', cursor: 'pointer' },
-  cameraTelaCheia: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: '#000', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
-  video: { width: '100%', height: '100%', objectFit: 'contain' },
-  botaoFechar: { position: 'absolute', top: 20, right: 20, padding: '12px', backgroundColor: '#e60000', color: '#fff', fontSize: '18px', borderRadius: '10px', border: 'none', fontWeight: 'bold' },
+  botaoFinalizar: { marginTop: 20, width: '100%', padding: '14px', backgroundColor: '#007bff', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '17px', cursor: 'pointer' }
 };
-
-

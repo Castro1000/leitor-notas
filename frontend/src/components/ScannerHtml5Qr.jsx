@@ -3,16 +3,16 @@ import { Html5Qrcode } from 'html5-qrcode';
 
 export default function ScannerHtml5Qr({ onResult, onClose }) {
   const scannerRef = useRef(null);
-  const divId = 'html5qr-code-fullscreen';
+  const divId = 'html5qr-code-area';
   const beep = useRef(new Audio('/beep.mp3'));
 
   useEffect(() => {
     const iniciarScanner = async () => {
       const config = {
         fps: 10,
-        qrbox: { width: 300, height: 100 },
-        aspectRatio: 16 / 9,
-        disableFlip: false,
+        qrbox: { width: 320, height: 90 }, // Faixa horizontal como leitores de boleto
+        aspectRatio: 1.7777778, // 16:9
+        disableFlip: true,
         rememberLastUsedCamera: true
       };
 
@@ -29,22 +29,24 @@ export default function ScannerHtml5Qr({ onResult, onClose }) {
             { deviceId: backCamera.id },
             config,
             (decodedText) => {
-              beep.current.play();
-              scannerRef.current.stop().then(() => {
-                onResult(decodedText);
-              });
+              if (decodedText.length === 44) {
+                beep.current.play();
+                scannerRef.current.stop().then(() => {
+                  onResult(decodedText);
+                });
+              }
             },
             (errorMsg) => {
-              // erros de leitura ignorados
+              // Ignore read errors
             }
           );
         } else {
-          alert('Nenhuma câmera encontrada');
+          alert('Nenhuma câmera encontrada.');
           onClose();
         }
       } catch (err) {
         console.error('Erro ao iniciar scanner:', err);
-        alert('Erro ao acessar a câmera');
+        alert('Erro ao acessar a câmera.');
         onClose();
       }
     };
@@ -60,46 +62,64 @@ export default function ScannerHtml5Qr({ onResult, onClose }) {
   }, []);
 
   return (
-    <div style={estilo.container}>
-      <div id={divId} style={estilo.videoContainer}></div>
-      <button style={estilo.botaoFechar} onClick={onClose}>
-        ❌ Fechar Câmera
-      </button>
+    <div style={estilos.overlay}>
+      <div style={estilos.centralizar}>
+        <div style={estilos.borda}>
+          <div id={divId} style={estilos.areaVideo}></div>
+          <div style={estilos.retangulo}></div>
+        </div>
+      </div>
+      <button onClick={onClose} style={estilos.botaoFechar}>❌ Fechar</button>
     </div>
   );
 }
 
-const estilo = {
-  container: {
+const estilos = {
+  overlay: {
     position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100vw',
-    height: '100vh',
+    inset: 0,
     backgroundColor: '#000',
     zIndex: 9999,
+  },
+  centralizar: {
     display: 'flex',
-    flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
+    height: '100vh'
   },
-  videoContainer: {
+  borda: {
+    position: 'relative',
+    width: '90vw',
+    maxWidth: '600px',
+    height: '60vh',
+  },
+  areaVideo: {
     width: '100%',
-    maxWidth: '100vw',
-    height: '100vh',
+    height: '100%',
+  },
+  retangulo: {
+    border: '3px dashed #FFD700',
+    position: 'absolute',
+    top: 'calc(50% - 45px)',
+    left: '10%',
+    width: '80%',
+    height: '90px',
+    pointerEvents: 'none',
+    boxSizing: 'border-box',
+    borderRadius: '12px'
   },
   botaoFechar: {
     position: 'absolute',
-    top: 20,
-    right: 20,
-    padding: '12px 18px',
+    top: 16,
+    right: 16,
+    padding: '10px 14px',
     fontSize: '16px',
-    fontWeight: 'bold',
     backgroundColor: '#e60000',
     color: '#fff',
     border: 'none',
     borderRadius: '8px',
+    fontWeight: 'bold',
     cursor: 'pointer',
-    zIndex: 10000,
+    zIndex: 10000
   }
 };
