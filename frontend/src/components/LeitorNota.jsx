@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import ScannerHtml5Qr from './ScannerHtml5Qr';
+import ScannerCamera from './ScannerCamera'; // substituto do antigo ScannerHtml5Qr
 
 export default function LeitorNota() {
   const inputRef = useRef();
@@ -138,7 +138,7 @@ export default function LeitorNota() {
   return (
     <div style={styles.wrapper}>
       {scannerAberto && (
-        <ScannerHtml5Qr
+        <ScannerCamera
           onResult={(codigo) => {
             setScannerAberto(false);
             processarChave(codigo);
