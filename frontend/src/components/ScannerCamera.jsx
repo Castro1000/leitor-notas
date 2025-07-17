@@ -8,10 +8,16 @@ export default function ScannerCamera({ onResult, onClose }) {
   const codeReader = useRef(null);
 
   useEffect(() => {
+    const stopCamera = () => {
+      const stream = videoRef.current?.srcObject;
+      stream?.getTracks().forEach(track => track.stop());
+      codeReader.current?.reset();
+    };
+
     const startCamera = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { exact: 'environment' } },
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false
         });
 
@@ -31,12 +37,18 @@ export default function ScannerCamera({ onResult, onClose }) {
         codeReader.current = new BrowserMultiFormatReader(hints);
 
         codeReader.current.decodeFromVideoDevice(null, videoRef.current, (result, err) => {
-          if (result?.text && result.text.length === 44) {
-            beep.current.play();
-            stopCamera();
-            onResult(result.text);
+          if (result?.text) {
+            console.log('📦 Código detectado:', result.text);
+            const texto = result.text.replace(/[^0-9]/g, ''); // remove lixo
+
+            if (texto.length === 44) {
+              beep.current.play();
+              stopCamera();
+              onResult(texto);
+            }
           }
         });
+
       } catch (err) {
         console.error('Erro ao acessar câmera:', err);
         alert('Erro ao abrir câmera. Verifique permissões.');
@@ -44,29 +56,15 @@ export default function ScannerCamera({ onResult, onClose }) {
       }
     };
 
-    const stopCamera = () => {
-      const stream = videoRef.current?.srcObject;
-      stream?.getTracks().forEach(track => track.stop());
-      codeReader.current?.reset();
-    };
-
     startCamera();
-
-    return () => {
-      stopCamera();
-    };
+    return () => stopCamera();
   }, []);
 
   return (
     <div style={estilos.overlay}>
       <video ref={videoRef} style={estilos.video} />
-
-      {/* Retângulo de leitura */}
       <div style={estilos.barraLeitura}></div>
-
-      {/* Mensagem escaneando */}
       <div style={estilos.mensagemEscaneando}>📡 Escaneando nota...</div>
-
       <button onClick={onClose} style={estilos.botaoFechar}>❌ Fechar</button>
     </div>
   );
@@ -74,55 +72,24 @@ export default function ScannerCamera({ onResult, onClose }) {
 
 const estilos = {
   overlay: {
-    position: 'fixed',
-    inset: 0,
-    backgroundColor: '#000',
-    zIndex: 9999,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'column'
+    position: 'fixed', inset: 0, backgroundColor: '#000', zIndex: 9999,
+    display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column'
   },
-  video: {
-    width: '100vw',
-    height: '100vh',
-    objectFit: 'cover'
-  },
+  video: { width: '100vw', height: '100vh', objectFit: 'cover' },
   barraLeitura: {
-    position: 'absolute',
-    top: 'calc(50% - 45px)',
-    left: '10%',
-    width: '80%',
-    height: '90px',
-    border: '3px dashed #FFD700',
-    borderRadius: '12px',
+    position: 'absolute', top: 'calc(50% - 45px)', left: '10%',
+    width: '80%', height: '90px', border: '3px dashed #FFD700', borderRadius: '12px',
     pointerEvents: 'none'
   },
   mensagemEscaneando: {
-    position: 'absolute',
-    bottom: '80px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    color: '#FFD700',
-    padding: '10px 20px',
-    borderRadius: '10px',
-    fontSize: '18px',
-    fontWeight: 'bold',
-    zIndex: 10
+    position: 'absolute', bottom: '80px', left: '50%', transform: 'translateX(-50%)',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)', color: '#FFD700',
+    padding: '10px 20px', borderRadius: '10px', fontSize: '18px', fontWeight: 'bold'
   },
   botaoFechar: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    padding: '10px 14px',
-    fontSize: '16px',
-    backgroundColor: '#e60000',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '8px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    zIndex: 10000
+    position: 'absolute', top: 16, right: 16,
+    padding: '10px 14px', fontSize: '16px',
+    backgroundColor: '#e60000', color: '#fff',
+    border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'
   }
 };
