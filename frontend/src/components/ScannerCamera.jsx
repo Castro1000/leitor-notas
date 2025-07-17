@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
+import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 
 export default function ScannerCamera({ onResult, onClose }) {
   const videoRef = useRef(null);
@@ -20,7 +21,14 @@ export default function ScannerCamera({ onResult, onClose }) {
           videoRef.current.play();
         }
 
-        codeReader.current = new BrowserMultiFormatReader();
+        const hints = new Map();
+        hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+          BarcodeFormat.CODE_128,
+          BarcodeFormat.ITF,
+          BarcodeFormat.EAN_13
+        ]);
+
+        codeReader.current = new BrowserMultiFormatReader(hints);
 
         codeReader.current.decodeFromVideoDevice(null, videoRef.current, (result, err) => {
           if (result?.text && result.text.length === 44) {
