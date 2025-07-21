@@ -162,16 +162,6 @@ router.put('/finalizar-container/:id', async (req, res) => {
   }
 });
 
-// LISTAR NOTAS
-router.get('/listar-notas', async (req, res) => {
-  try {
-    const [notas] = await db.query('SELECT * FROM notas_fiscais ORDER BY data_registro DESC');
-    return res.json(notas);
-  } catch (error) {
-    return res.status(500).json({ message: 'Erro ao listar notas', error });
-  }
-});
-
 // MARCAR COMO ENTREGUE
 router.put('/marcar-entregue/:id', async (req, res) => {
   const { id } = req.params;
@@ -183,6 +173,16 @@ router.put('/marcar-entregue/:id', async (req, res) => {
     return res.json({ message: 'Nota marcada como ENTREGUE.' });
   } catch (error) {
     return res.status(500).json({ message: 'Erro ao marcar como entregue', error });
+  }
+});
+
+// LISTAR NOTAS
+router.get('/listar-notas', async (req, res) => {
+  try {
+    const [notas] = await db.query('SELECT * FROM notas_fiscais ORDER BY data_registro DESC');
+    return res.json(notas);
+  } catch (error) {
+    return res.status(500).json({ message: 'Erro ao listar notas', error });
   }
 });
 
@@ -201,6 +201,34 @@ router.post('/login', async (req, res) => {
     return res.json({ message: 'Login bem-sucedido', usuario: usuarios[0] });
   } catch (error) {
     return res.status(500).json({ message: 'Erro ao fazer login', error });
+  }
+});
+
+// LISTAR USUÁRIOS (para o modal do admin)
+router.get('/usuarios', async (req, res) => {
+  try {
+    const [usuarios] = await db.query('SELECT id, usuario FROM usuarios');
+    res.json(usuarios);
+  } catch (error) {
+    console.error('Erro ao buscar usuários:', error);
+    res.status(500).json({ message: 'Erro ao buscar usuários', error });
+  }
+});
+
+// EDITAR USUÁRIO
+router.put('/usuarios/:id', async (req, res) => {
+  const { id } = req.params;
+  const { nome, senha } = req.body;
+
+  try {
+    await db.query(
+      'UPDATE usuarios SET usuario = ?, senha = ? WHERE id = ?',
+      [nome, senha, id]
+    );
+    res.json({ message: 'Usuário atualizado com sucesso' });
+  } catch (error) {
+    console.error('Erro ao atualizar usuário:', error);
+    res.status(500).json({ message: 'Erro ao atualizar usuário', error });
   }
 });
 
