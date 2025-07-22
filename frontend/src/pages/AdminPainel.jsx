@@ -10,12 +10,20 @@ import ModalUsuarios from "./ModalUsuarios";
 export default function AdminPainel() {
   const [notas, setNotas] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const [dataFiltro, setDataFiltro] = useState(() => new Date().toISOString().slice(0, 10));
+  const [dataFiltro, setDataFiltro] = useState(() => {
+  const hojeManaus = new Date().toLocaleDateString("pt-BR", {
+        timeZone: "America/Manaus",
+      }).split("/").reverse().join("-");
+      return hojeManaus;
+    });
+
   const [ordenarPor, setOrdenarPor] = useState("data_registro");
   const [buscaNumero, setBuscaNumero] = useState("");
   const [mostrarExportar, setMostrarExportar] = useState(false);
   const [abrirConfig, setAbrirConfig] = useState(false);
   const navigate = useNavigate();
+
+  
 
   useEffect(() => {
     const buscarNotas = async () => {
@@ -143,7 +151,7 @@ export default function AdminPainel() {
         <input type="date" value={dataFiltro} onChange={(e) => setDataFiltro(e.target.value)} />
         <input type="text" placeholder="Buscar nº nota" value={buscaNumero} onChange={(e) => setBuscaNumero(e.target.value)} />
         <div className="exportar-container">
-          <button onClick={() => setMostrarExportar(!mostrarExportar)}>📁 Exportar</button>
+          <button  onClick={() => setMostrarExportar(!mostrarExportar)}>📁 Exportar</button>
           {mostrarExportar && (
             <div className="exportar-opcoes">
               <button onClick={exportarPDF}>📄 PDF</button>
