@@ -16,6 +16,8 @@ export default function Login() {
     try {
       const { data } = await api.post("/api/login", { usuario, senha });
 
+      // Salvar token e usuário no localStorage
+      localStorage.setItem("token", data.token);
       localStorage.setItem("usuarioLogado", JSON.stringify(data.usuario));
 
       if (data.usuario.usuario === "admin") {
@@ -51,9 +53,7 @@ export default function Login() {
 
         {erro && <p style={styles.erro}>{erro}</p>}
 
-        <button type="submit" style={styles.botao}>
-          Entrar
-        </button>
+        <button type="submit" style={styles.botao}>Entrar</button>
       </form>
     </div>
   );
