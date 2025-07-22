@@ -110,6 +110,22 @@ router.put('/finalizar-nota/:id', autenticarToken, async (req, res) => {
   }
 });
 
+// ==================== FINALIZAR CONTAINER ====================
+router.put('/finalizar-container/:id', autenticarToken, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    await db.query(
+      'UPDATE notas_fiscais SET status = ?, data_logistica_fim = NOW() WHERE id = ?',
+      ['CONTAINER FINALIZADO', id]
+    );
+    return res.json({ message: 'Container finalizado com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao finalizar container:', error);
+    return res.status(500).json({ message: 'Erro ao finalizar container', error });
+  }
+});
+
 // ==================== LISTAR NOTAS ====================
 router.get('/listar-notas', autenticarToken, async (req, res) => {
   try {

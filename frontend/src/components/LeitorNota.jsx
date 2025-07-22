@@ -51,7 +51,7 @@ export default function LeitorNota() {
 
       if (data.status === "EM ANDAMENTO") {
         setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
-        setMensagemFluxo("🟡 Aguardando setor de OPERAÇÃO bipar a nota.");
+        setMensagemFluxo("🟡 Aguardando OPERADOR bipar a nota.");
       } else if (data.status === "CONTAINER SENDO OVADO") {
         setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
         setMensagemFluxo("🔵 Aguardando OPERADOR finalizar container.");
@@ -90,7 +90,7 @@ export default function LeitorNota() {
           if (usuario === "operador") setMostrarBotaoFinalizarContainer(true);
         } else if (notaRecebida.status === "EM ANDAMENTO") {
           setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
-          setMensagemFluxo("🟡 Aguardando setor de OPERAÇÃO bipar a nota.");
+          setMensagemFluxo("🟡 Aguardando OPERADOR bipar a nota.");
         }
       } else {
         setMensagem(data?.message ? `⚠️ ${data.message}` : "❌ Erro ao processar a chave");

@@ -20,7 +20,8 @@ export default function Login() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("usuarioLogado", JSON.stringify(data.usuario));
 
-      if (data.usuario.usuario === "admin") {
+      // Redirecionamento conforme tipo de usuário
+      if (data.usuario.usuario === "administrador") {
         navigate("/admin");
       } else {
         navigate("/leitor");
