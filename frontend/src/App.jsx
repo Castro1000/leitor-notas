@@ -4,16 +4,13 @@ import LeitorNota from "./components/LeitorNota";
 import HistoricoNotas from "./pages/HistoricoNotas";
 import Relatorio from "./pages/Relatorio";
 import AdminPainel from "./pages/AdminPainel";
-import RotaProtegida from "./components/RotaProtegida";
+import RotaProtegida from "./components/RotaProtegida"; // <-- Importa a proteção
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rota pública */}
         <Route path="/" element={<Login />} />
-
-        {/* Rotas protegidas */}
         <Route
           path="/leitor"
           element={
