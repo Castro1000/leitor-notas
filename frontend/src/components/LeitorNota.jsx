@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from "@zxing/library";
 
 export default function LeitorNota() {
   const inputRef = useRef();
-  const scannerRef = useRef(null);
+  const videoRef = useRef(null);
+  const readerRef = useRef(null);
+  const streamRef = useRef(null);
+
   const [mensagem, setMensagem] = useState("");
   const [mensagemTipo, setMensagemTipo] = useState("info");
   const [mensagemFluxo, setMensagemFluxo] = useState("");
@@ -27,34 +30,55 @@ export default function LeitorNota() {
     navigate("/");
   };
 
-  const iniciarScanner = () => {
+  const iniciarScanner = async () => {
     setScannerAberto(true);
-    const scanner = new Html5QrcodeScanner(
-      "scanner",
-      {
-        fps: 10,
-        qrbox: 250,
-        rememberLastUsedCamera: true,
-      },
-      false
-    );
+    const hints = new Map();
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.ITF,
+      BarcodeFormat.CODE_39,
+      BarcodeFormat.EAN_13
+    ]);
 
-    scanner.render(
-      (decodedText) => {
-        const chaveLimpa = decodedText.replace(/\D/g, "").trim(); // remove tudo que não for número
-        if (chaveLimpa.length === 44) {
-          bip.play();
-          scanner.clear();
-          setScannerAberto(false);
-          processarChave(chaveLimpa);
-        }
-      },
-      (error) => {
-        console.warn("Erro ao escanear:", error);
+    const reader = new BrowserMultiFormatReader(hints);
+    readerRef.current = reader;
+
+    try {
+      const constraints = {
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+
+        reader.decodeFromVideoDevice(null, videoRef.current, (result, err) => {
+          if (result?.text && result.text.length === 44) {
+            pararScanner();
+            bip.play();
+            processarChave(result.text);
+          }
+        });
       }
-    );
+    } catch (err) {
+      console.error("Erro ao acessar câmera:", err);
+      alert("Erro ao acessar a câmera. Verifique permissões.");
+      pararScanner();
+    }
+  };
 
-    scannerRef.current = scanner;
+  const pararScanner = () => {
+    readerRef.current?.reset();
+    const stream = streamRef.current;
+    stream?.getTracks().forEach(track => track.stop());
+    setScannerAberto(false);
   };
 
   const processarChave = async (chave) => {
@@ -72,6 +96,7 @@ export default function LeitorNota() {
         usuario_logado: usuario.toLowerCase(),
       });
 
+      bip.play();
       const registro = new Date(data.nota?.data_registro);
       const dataFormatada = registro.toLocaleDateString();
       const horaFormatada = registro.toLocaleTimeString();
@@ -132,7 +157,7 @@ export default function LeitorNota() {
 
   const handleLeitura = (e) => {
     if (e.key === "Enter") {
-      const chave = e.target.value.replace(/\D/g, "").trim(); // limpa tudo que não for número
+      const chave = e.target.value.trim();
       inputRef.current.value = "";
       if (chave.length === 44) processarChave(chave);
       else {
@@ -185,18 +210,18 @@ export default function LeitorNota() {
           📷 Ler com Câmera
         </button>
 
-        <div id="scanner" style={{ marginTop: 20 }} />
+        {scannerAberto && (
+          <div style={styles.scannerBox}>
+            <video ref={videoRef} style={styles.video} />
+          </div>
+        )}
 
         {mensagem && (
           <div
             style={{
               ...styles.mensagem,
-              backgroundColor:
-                mensagemTipo === "erro"
-                  ? "#800000"
-                  : mensagemTipo === "finalizada"
-                  ? "#004d00"
-                  : "#333",
+              backgroundColor: mensagemTipo === "erro" ? "#800000" :
+                mensagemTipo === "finalizada" ? "#004d00" : "#333",
               color: mensagemTipo === "finalizada" ? "#00FF99" : "#FFD700",
             }}
           >
@@ -277,6 +302,18 @@ const styles = {
     borderRadius: "10px",
     fontSize: "16px",
     cursor: "pointer",
+  },
+  scannerBox: {
+    marginTop: 20,
+    border: "3px dashed #FFD700",
+    borderRadius: "12px",
+    overflow: "hidden",
+    position: "relative",
+  },
+  video: {
+    width: "100%",
+    height: "auto",
+    objectFit: "cover",
   },
   mensagem: {
     marginTop: "20px",

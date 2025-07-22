@@ -1,292 +1,131 @@
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import api from "../services/api";
-import ScannerCamera from "./ScannerCamera";
+import { useEffect, useRef } from "react";
+import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from "@zxing/library";
 
-export default function LeitorNota() {
-  const inputRef = useRef();
-  const [mensagem, setMensagem] = useState("");
-  const [mensagemTipo, setMensagemTipo] = useState("info");
-  const [mensagemFluxo, setMensagemFluxo] = useState("");
-  const [nota, setNota] = useState(null);
-  const [status, setStatus] = useState("");
-  const [mostrarBotaoFinalizarPH, setMostrarBotaoFinalizarPH] = useState(false);
-  const [mostrarBotaoFinalizarContainer, setMostrarBotaoFinalizarContainer] = useState(false);
-  const [scannerAberto, setScannerAberto] = useState(false);
-  const navigate = useNavigate();
-  const usuario = JSON.parse(localStorage.getItem("usuarioLogado"))?.usuario || "";
-  const bip = new Audio("/beep.mp3");
+export default function ScannerCamera({ onResult, onClose }) {
+  const videoRef = useRef(null);
+  const readerRef = useRef(null);
+  const bip = useRef(new Audio("/beep.mp3"));
 
   useEffect(() => {
-    inputRef.current?.focus();
+    const hints = new Map();
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.ITF,
+      BarcodeFormat.CODE_39,
+      BarcodeFormat.EAN_13
+    ]);
+
+    const reader = new BrowserMultiFormatReader(hints);
+    readerRef.current = reader;
+
+    let scanning = true;
+
+    const startCamera = async () => {
+      try {
+        const constraints = {
+          video: {
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        };
+
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.setAttribute("playsinline", true);
+          await videoRef.current.play();
+
+          reader.decodeFromVideoElementContinuously(videoRef.current, (result, err) => {
+            if (!scanning) return;
+
+            if (result?.text && result.text.length === 44) {
+              scanning = false;
+              bip.current.play();
+              stopCamera();
+              onResult(result.text);
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao acessar câmera:", error);
+        alert("Erro ao acessar a câmera.");
+        stopCamera();
+        onClose();
+      }
+    };
+
+    const stopCamera = () => {
+      reader.reset();
+      const stream = videoRef.current?.srcObject;
+      stream?.getTracks().forEach((track) => track.stop());
+    };
+
+    startCamera();
+
+    return () => {
+      scanning = false;
+      stopCamera();
+    };
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("usuarioLogado");
-    navigate("/");
-  };
-
-  const processarChave = async (chave) => {
-    const numeroNota = chave.slice(29, 35).replace(/^0+/, "").slice(0, 5);
-    try {
-      const { data } = await api.post("/api/gravar-nota", {
-        chave_acesso: chave,
-        numero_nota: numeroNota,
-        emitente_nome: "Emitente Padrão",
-        emitente_cnpj: "00000000000000",
-        destinatario_nome: "Cliente Padrão",
-        destinatario_cnpj: "00000000000",
-        data_emissao: new Date().toISOString().slice(0, 10),
-        valor_total: 0,
-        usuario_logado: usuario.toLowerCase(),
-      });
-
-      bip.play();
-      const registro = new Date(data.nota?.data_registro);
-      const dataFormatada = registro.toLocaleDateString();
-      const horaFormatada = registro.toLocaleTimeString();
-
-      setNota(data.nota);
-      setStatus(data.status);
-
-      if (data.status === "EM ANDAMENTO") {
-        setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
-        setMensagemFluxo("🟡 Aguardando setor de LOGÍSTICA bipar a nota.");
-      } else if (data.status === "CONTAINER SENDO OVADO") {
-        setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
-        setMensagemFluxo("🔵 Aguardando LOGÍSTICA finalizar container.");
-        if (usuario === "logistica") setMostrarBotaoFinalizarContainer(true);
-      } else if (data.status === "CONTAINER FINALIZADO") {
-        setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
-        setMensagemFluxo("🔵 Aguardando PH finalizar.");
-        if (usuario === "ph") setMostrarBotaoFinalizarPH(true);
-      } else if (data.status === "FINALIZADA") {
-        const finalizada = new Date(data.nota?.data_entrega || data.nota?.data_registro);
-        setMensagem(`✅ NF-e nº ${numeroNota} foi FINALIZADA em ${finalizada.toLocaleDateString()} às ${finalizada.toLocaleTimeString()}`);
-        setMensagemFluxo("✅ Nota encerrada.");
-        setMensagemTipo("finalizada");
-      }
-    } catch (error) {
-      const data = error.response?.data;
-      if (data?.nota) {
-        const notaRecebida = data.nota;
-        setNota(notaRecebida);
-        setStatus(notaRecebida.status);
-        const finalizada = new Date(notaRecebida?.data_entrega || notaRecebida?.data_registro);
-        const dt = finalizada.toLocaleDateString();
-        const hr = finalizada.toLocaleTimeString();
-
-        if (notaRecebida.status === "FINALIZADA") {
-          setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi FINALIZADA em ${dt} às ${hr}`);
-          setMensagemFluxo("✅ Nota encerrada.");
-          setMensagemTipo("finalizada");
-        } else if (notaRecebida.status === "CONTAINER FINALIZADO") {
-          setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
-          setMensagemFluxo("🔵 Aguardando PH finalizar.");
-          if (usuario === "ph") setMostrarBotaoFinalizarPH(true);
-        } else if (notaRecebida.status === "CONTAINER SENDO OVADO") {
-          setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
-          setMensagemFluxo("🔵 Aguardando LOGÍSTICA finalizar container.");
-          if (usuario === "logistica") setMostrarBotaoFinalizarContainer(true);
-        } else if (notaRecebida.status === "EM ANDAMENTO") {
-          setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
-          setMensagemFluxo("🟡 Aguardando setor de LOGÍSTICA bipar a nota.");
-        }
-      } else {
-        setMensagem(data?.message ? `⚠️ ${data.message}` : "❌ Erro ao processar a chave");
-        setMensagemTipo("erro");
-        setMensagemFluxo("");
-      }
-    }
-  };
-
-  const handleLeitura = (e) => {
-    if (e.key === "Enter") {
-      const chave = e.target.value.trim();
-      inputRef.current.value = "";
-      if (chave.length === 44) processarChave(chave);
-      else {
-        setMensagem("❌ Chave inválida (deve ter 44 dígitos)");
-        setMensagemTipo("erro");
-      }
-    }
-  };
-
-  const finalizarNota = async () => {
-    if (!nota?.id) return;
-    await api.put(`/api/finalizar-nota/${nota.id}`);
-    setStatus("FINALIZADA");
-    setMostrarBotaoFinalizarPH(false);
-    setMensagem("✅ Nota finalizada com sucesso!");
-    setMensagemFluxo("✅ Nota encerrada.");
-    setMensagemTipo("finalizada");
-  };
-
-  const finalizarContainer = async () => {
-    if (!nota?.id) return;
-    await api.put(`/api/finalizar-container/${nota.id}`);
-    setStatus("CONTAINER FINALIZADO");
-    setMostrarBotaoFinalizarContainer(false);
-    setMensagemFluxo("🔵 Aguardando PH finalizar.");
-  };
-
   return (
-    <div style={styles.wrapper}>
-      {scannerAberto && (
-        <ScannerCamera
-          onResult={(codigo) => {
-            setScannerAberto(false);
-            processarChave(codigo);
-          }}
-          onClose={() => setScannerAberto(false)}
-        />
-      )}
-
-      <div style={styles.container}>
-        <div style={styles.topBar}>
-          <h2 style={{ color: "#FFD700" }}>📦 Leitor de Notas Fiscais</h2>
-          <button onClick={handleLogout} style={styles.logoutButton}>🚪 Sair</button>
-        </div>
-        <p>
-          <span style={{ color: "#ccc" }}>Usuário:</span>{" "}
-          <span style={{ color: "#FFD700" }}>{usuario.toUpperCase()}</span>
-        </p>
-        <input
-          ref={inputRef}
-          type="text"
-          placeholder="Bipe ou escaneie a nota fiscal"
-          onKeyDown={handleLeitura}
-          style={styles.input}
-        />
-        <button onClick={() => setScannerAberto(true)} style={styles.botaoCamera}>
-          📷 Ler com Câmera
-        </button>
-
-        {mensagem && (
-          <div
-            style={{
-              ...styles.mensagem,
-              backgroundColor:
-                mensagemTipo === "erro"
-                  ? "#800000"
-                  : mensagemTipo === "finalizada"
-                  ? "#004d00"
-                  : "#333",
-              color: mensagemTipo === "finalizada" ? "#00FF99" : "#FFD700",
-            }}
-          >
-            {mensagem}
-          </div>
-        )}
-
-        {mensagemFluxo && <div style={styles.fluxoBox}>{mensagemFluxo}</div>}
-
-        {status && (
-          <div style={styles.statusBox}>
-            <strong>Status:</strong>{" "}
-            <span style={styles.statusTexto}>{status}</span>
-          </div>
-        )}
-
-        {mostrarBotaoFinalizarPH && usuario === "ph" && (
-          <button style={styles.botaoFinalizar} onClick={finalizarNota}>
-            ✅ Finalizar Nota
-          </button>
-        )}
-
-        {mostrarBotaoFinalizarContainer && usuario === "logistica" && (
-          <button style={styles.botaoFinalizar} onClick={finalizarContainer}>
-            📦 Finalizar Container
-          </button>
-        )}
-      </div>
+    <div style={estilos.overlay}>
+      <video ref={videoRef} style={estilos.video} />
+      <div style={estilos.barra}></div>
+      <div style={estilos.info}>📡 Escaneando código de barras da nota...</div>
+      <button style={estilos.fechar} onClick={onClose}>❌ Fechar</button>
     </div>
   );
 }
 
-const styles = {
-  wrapper: {
-    height: "100vh",
-    background: "#0a0a0a",
+const estilos = {
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "#000",
     display: "flex",
-    alignItems: "center",
+    flexDirection: "column",
     justifyContent: "center",
-  },
-  container: {
-    background: "#222831",
-    padding: "30px",
-    borderRadius: "16px",
-    width: "100%",
-    maxWidth: "480px",
-    color: "#fff",
-  },
-  topBar: {
-    display: "flex",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "15px",
+    zIndex: 9999,
   },
-  logoutButton: {
+  video: {
+    width: "100vw",
+    height: "100vh",
+    objectFit: "cover",
+  },
+  barra: {
+    position: "absolute",
+    top: "calc(50% - 40px)",
+    left: "10%",
+    width: "80%",
+    height: "80px",
+    border: "3px dashed #FFD700",
+    borderRadius: "12px",
+    pointerEvents: "none",
+  },
+  info: {
+    position: "absolute",
+    bottom: "70px",
+    color: "#FFD700",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    padding: "10px 20px",
+    borderRadius: "10px",
+    fontSize: "16px",
+    fontWeight: "bold",
+  },
+  fechar: {
+    position: "absolute",
+    top: 20,
+    right: 20,
+    padding: "10px 14px",
+    fontSize: "16px",
     backgroundColor: "#e60000",
     color: "#fff",
     border: "none",
-    padding: "8px 14px",
     borderRadius: "8px",
-  },
-  input: {
-    fontSize: "20px",
-    padding: "14px",
-    width: "100%",
-    borderRadius: "10px",
-    marginTop: "10px",
-    backgroundColor: "#393e46",
-    color: "#fff",
-  },
-  botaoCamera: {
-    width: "100%",
-    padding: "12px",
-    backgroundColor: "#FFD700",
-    color: "#000",
-    fontWeight: "bold",
-    marginTop: "12px",
-    borderRadius: "10px",
-    fontSize: "16px",
-    cursor: "pointer",
-  },
-  mensagem: {
-    marginTop: "20px",
-    padding: "12px",
-    borderRadius: "10px",
-    textAlign: "center",
-    fontWeight: "bold",
-  },
-  fluxoBox: {
-    marginTop: "12px",
-    textAlign: "center",
-    background: "#101820",
-    padding: "10px",
-    borderRadius: "8px",
-    fontSize: "16px",
-    color: "#FFD700",
-  },
-  statusBox: {
-    marginTop: "18px",
-    padding: "12px",
-    background: "#000",
-    borderRadius: "8px",
-    fontSize: "17px",
-  },
-  statusTexto: { marginLeft: 10, color: "#00FF99", fontWeight: "bold" },
-  botaoFinalizar: {
-    marginTop: 20,
-    width: "100%",
-    padding: "14px",
-    backgroundColor: "#007bff",
-    color: "#fff",
-    border: "none",
-    borderRadius: "10px",
-    fontWeight: "bold",
-    fontSize: "17px",
     cursor: "pointer",
   },
 };

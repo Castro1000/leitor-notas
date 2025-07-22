@@ -10,6 +10,7 @@
   "author": "Ivaney Castro",
   "license": "ISC",
   "dependencies": {
+    "@zxing/library": "^0.21.3",
     "cors": "^2.8.5",
     "dotenv": "^17.0.1",
     "express": "^4.18.2",
