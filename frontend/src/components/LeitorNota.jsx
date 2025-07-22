@@ -51,15 +51,15 @@ export default function LeitorNota() {
 
       if (data.status === "EM ANDAMENTO") {
         setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
-        setMensagemFluxo("🟡 Aguardando setor de LOGÍSTICA bipar a nota.");
+        setMensagemFluxo("🟡 Aguardando setor de OPERAÇÃO bipar a nota.");
       } else if (data.status === "CONTAINER SENDO OVADO") {
         setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
-        setMensagemFluxo("🔵 Aguardando LOGÍSTICA finalizar container.");
-        if (usuario === "logistica") setMostrarBotaoFinalizarContainer(true);
+        setMensagemFluxo("🔵 Aguardando OPERADOR finalizar container.");
+        if (usuario === "operador") setMostrarBotaoFinalizarContainer(true);
       } else if (data.status === "CONTAINER FINALIZADO") {
         setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
-        setMensagemFluxo("🔵 Aguardando PH finalizar.");
-        if (usuario === "ph") setMostrarBotaoFinalizarPH(true);
+        setMensagemFluxo("🔵 Aguardando VALIDADOR finalizar.");
+        if (usuario === "validador") setMostrarBotaoFinalizarPH(true);
       } else if (data.status === "FINALIZADA") {
         const finalizada = new Date(data.nota?.data_entrega || data.nota?.data_registro);
         setMensagem(`✅ NF-e nº ${numeroNota} foi FINALIZADA em ${finalizada.toLocaleDateString()} às ${finalizada.toLocaleTimeString()}`);
@@ -82,15 +82,15 @@ export default function LeitorNota() {
           setMensagemTipo("finalizada");
         } else if (notaRecebida.status === "CONTAINER FINALIZADO") {
           setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
-          setMensagemFluxo("🔵 Aguardando PH finalizar.");
-          if (usuario === "ph") setMostrarBotaoFinalizarPH(true);
+          setMensagemFluxo("🔵 Aguardando VALIDADOR finalizar.");
+          if (usuario === "validador") setMostrarBotaoFinalizarPH(true);
         } else if (notaRecebida.status === "CONTAINER SENDO OVADO") {
           setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
-          setMensagemFluxo("🔵 Aguardando LOGÍSTICA finalizar container.");
-          if (usuario === "logistica") setMostrarBotaoFinalizarContainer(true);
+          setMensagemFluxo("🔵 Aguardando OPERADOR finalizar container.");
+          if (usuario === "operador") setMostrarBotaoFinalizarContainer(true);
         } else if (notaRecebida.status === "EM ANDAMENTO") {
           setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
-          setMensagemFluxo("🟡 Aguardando setor de LOGÍSTICA bipar a nota.");
+          setMensagemFluxo("🟡 Aguardando setor de OPERAÇÃO bipar a nota.");
         }
       } else {
         setMensagem(data?.message ? `⚠️ ${data.message}` : "❌ Erro ao processar a chave");
@@ -127,7 +127,7 @@ export default function LeitorNota() {
     await api.put(`/api/finalizar-container/${nota.id}`);
     setStatus("CONTAINER FINALIZADO");
     setMostrarBotaoFinalizarContainer(false);
-    setMensagemFluxo("🔵 Aguardando PH finalizar.");
+    setMensagemFluxo("🔵 Aguardando VALIDADOR finalizar.");
   };
 
   return (
@@ -186,13 +186,13 @@ export default function LeitorNota() {
           </div>
         )}
 
-        {mostrarBotaoFinalizarPH && usuario === "ph" && (
+        {mostrarBotaoFinalizarPH && usuario === "validador" && (
           <button style={styles.botaoFinalizar} onClick={finalizarNota}>
             ✅ Finalizar Nota
           </button>
         )}
 
-        {mostrarBotaoFinalizarContainer && usuario === "logistica" && (
+        {mostrarBotaoFinalizarContainer && usuario === "operador" && (
           <button style={styles.botaoFinalizar} onClick={finalizarContainer}>
             📦 Finalizar Container
           </button>

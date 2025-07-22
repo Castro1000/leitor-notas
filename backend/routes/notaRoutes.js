@@ -37,11 +37,11 @@ router.post('/gravar-nota', autenticarToken, async (req, res) => {
     if (existente.length > 0) {
       const nota = existente[0];
 
-      if (usuario_logado === 'logistica') {
+      if (usuario_logado === 'operador') {
         if (nota.status === 'EM ANDAMENTO') {
           await db.query(
             'UPDATE notas_fiscais SET status = ?, usuario = ?, data_logistica = ? WHERE id = ?',
-            ['CONTAINER SENDO OVADO', 'logistica', dataAtual, nota.id]
+            ['CONTAINER SENDO OVADO', 'operador', dataAtual, nota.id]
           );
           const [atualizada] = await db.query('SELECT * FROM notas_fiscais WHERE id = ?', [nota.id]);
           return res.json({ message: 'Status atualizado', status: 'CONTAINER SENDO OVADO', nota: atualizada[0] });
@@ -52,15 +52,15 @@ router.post('/gravar-nota', autenticarToken, async (req, res) => {
         }
       }
 
-      if (usuario_logado === 'ph') {
+      if (usuario_logado === 'validador') {
         if (nota.status === 'CONTAINER FINALIZADO') {
           return res.json({ message: 'Nota pronta para finalização.', status: nota.status, nota });
         } else {
-          return res.status(400).json({ message: 'Aguardando LOGÍSTICA finalizar o container.', nota });
+          return res.status(400).json({ message: 'Aguardando OPERADOR finalizar o container.', nota });
         }
       }
 
-      if (usuario_logado === 'michele') {
+      if (usuario_logado === 'licenciador') {
         const [completa] = await db.query('SELECT * FROM notas_fiscais WHERE id = ?', [nota.id]);
         return res.status(400).json({ message: 'Nota já registrada.', nota: completa[0] });
       }
@@ -68,8 +68,8 @@ router.post('/gravar-nota', autenticarToken, async (req, res) => {
       return res.status(403).json({ message: 'Usuário não autorizado.' });
     }
 
-    if (usuario_logado !== 'michele') {
-      return res.status(400).json({ message: 'Nota ainda não registrada. Aguardando saída pela Michele.' });
+    if (usuario_logado !== 'licenciador') {
+      return res.status(400).json({ message: 'Nota ainda não registrada. Aguardando saída pelo Licenciador.' });
     }
 
     await db.query(
@@ -81,7 +81,7 @@ router.post('/gravar-nota', autenticarToken, async (req, res) => {
       [
         chave_acesso, numero_nota, emitente_nome, emitente_cnpj,
         destinatario_nome, destinatario_cnpj, data_emissao,
-        valor_total, 'EM ANDAMENTO', 'michele'
+        valor_total, 'EM ANDAMENTO', 'licenciador'
       ]
     );
 
