@@ -1,22 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import ScannerCamera from "./ScannerCamera";
 import api from "../services/api";
+import { Html5QrcodeScanner } from "html5-qrcode";
 
 export default function LeitorNota() {
   const inputRef = useRef();
+  const scannerRef = useRef(null);
   const [mensagem, setMensagem] = useState("");
   const [mensagemTipo, setMensagemTipo] = useState("info");
   const [mensagemFluxo, setMensagemFluxo] = useState("");
   const [nota, setNota] = useState(null);
   const [status, setStatus] = useState("");
   const [mostrarBotaoFinalizarPH, setMostrarBotaoFinalizarPH] = useState(false);
-  const [mostrarBotaoFinalizarContainer, setMostrarBotaoFinalizarContainer] =
-    useState(false);
+  const [mostrarBotaoFinalizarContainer, setMostrarBotaoFinalizarContainer] = useState(false);
   const [scannerAberto, setScannerAberto] = useState(false);
   const navigate = useNavigate();
-  const usuario =
-    JSON.parse(localStorage.getItem("usuarioLogado"))?.usuario || "";
+  const usuario = JSON.parse(localStorage.getItem("usuarioLogado"))?.usuario || "";
   const bip = new Audio("/beep.mp3");
 
   useEffect(() => {
@@ -26,6 +25,32 @@ export default function LeitorNota() {
   const handleLogout = () => {
     localStorage.removeItem("usuarioLogado");
     navigate("/");
+  };
+
+  const iniciarScanner = () => {
+    setScannerAberto(true);
+    const scanner = new Html5QrcodeScanner("scanner", {
+      fps: 10,
+      qrbox: 250,
+      rememberLastUsedCamera: true,
+      supportedScanTypes: [Html5QrcodeScanner.SCAN_TYPE_CAMERA]
+    }, false);
+
+    scanner.render(
+      (decodedText) => {
+        if (decodedText.length === 44) {
+          bip.play();
+          scanner.clear();
+          setScannerAberto(false);
+          processarChave(decodedText);
+        }
+      },
+      (error) => {
+        console.warn("Erro ao escanear:", error);
+      }
+    );
+
+    scannerRef.current = scanner;
   };
 
   const processarChave = async (chave) => {
@@ -52,29 +77,19 @@ export default function LeitorNota() {
       setStatus(data.status);
 
       if (data.status === "EM ANDAMENTO") {
-        setMensagem(
-          `✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`
-        );
+        setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
         setMensagemFluxo("🟡 Aguardando setor de LOGÍSTICA bipar a nota.");
       } else if (data.status === "CONTAINER SENDO OVADO") {
-        setMensagem(
-          `✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`
-        );
+        setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
         setMensagemFluxo("🔵 Aguardando LOGÍSTICA finalizar container.");
         if (usuario === "logistica") setMostrarBotaoFinalizarContainer(true);
       } else if (data.status === "CONTAINER FINALIZADO") {
-        setMensagem(
-          `✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`
-        );
+        setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
         setMensagemFluxo("🔵 Aguardando PH finalizar.");
         if (usuario === "ph") setMostrarBotaoFinalizarPH(true);
       } else if (data.status === "FINALIZADA") {
-        const finalizada = new Date(
-          data.nota?.data_entrega || data.nota?.data_registro
-        );
-        setMensagem(
-          `✅ NF-e nº ${numeroNota} foi FINALIZADA em ${finalizada.toLocaleDateString()} às ${finalizada.toLocaleTimeString()}`
-        );
+        const finalizada = new Date(data.nota?.data_entrega || data.nota?.data_registro);
+        setMensagem(`✅ NF-e nº ${numeroNota} foi FINALIZADA em ${finalizada.toLocaleDateString()} às ${finalizada.toLocaleTimeString()}`);
         setMensagemFluxo("✅ Nota encerrada.");
         setMensagemTipo("finalizada");
       }
@@ -84,40 +99,28 @@ export default function LeitorNota() {
         const notaRecebida = data.nota;
         setNota(notaRecebida);
         setStatus(notaRecebida.status);
-        const finalizada = new Date(
-          notaRecebida?.data_entrega || notaRecebida?.data_registro
-        );
+        const finalizada = new Date(notaRecebida?.data_entrega || notaRecebida?.data_registro);
         const dt = finalizada.toLocaleDateString();
         const hr = finalizada.toLocaleTimeString();
 
         if (notaRecebida.status === "FINALIZADA") {
-          setMensagem(
-            `✅ NF-e nº ${notaRecebida.numero_nota} foi FINALIZADA em ${dt} às ${hr}`
-          );
+          setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi FINALIZADA em ${dt} às ${hr}`);
           setMensagemFluxo("✅ Nota encerrada.");
           setMensagemTipo("finalizada");
         } else if (notaRecebida.status === "CONTAINER FINALIZADO") {
-          setMensagem(
-            `✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`
-          );
+          setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
           setMensagemFluxo("🔵 Aguardando PH finalizar.");
           if (usuario === "ph") setMostrarBotaoFinalizarPH(true);
         } else if (notaRecebida.status === "CONTAINER SENDO OVADO") {
-          setMensagem(
-            `✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`
-          );
+          setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
           setMensagemFluxo("🔵 Aguardando LOGÍSTICA finalizar container.");
           if (usuario === "logistica") setMostrarBotaoFinalizarContainer(true);
         } else if (notaRecebida.status === "EM ANDAMENTO") {
-          setMensagem(
-            `✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`
-          );
+          setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
           setMensagemFluxo("🟡 Aguardando setor de LOGÍSTICA bipar a nota.");
         }
       } else {
-        setMensagem(
-          data?.message ? `⚠️ ${data.message}` : "❌ Erro ao processar a chave"
-        );
+        setMensagem(data?.message ? `⚠️ ${data.message}` : "❌ Erro ao processar a chave");
         setMensagemTipo("erro");
         setMensagemFluxo("");
       }
@@ -156,22 +159,10 @@ export default function LeitorNota() {
 
   return (
     <div style={styles.wrapper}>
-      {scannerAberto && (
-        <ScannerCamera
-          onResult={(codigo) => {
-            setScannerAberto(false);
-            processarChave(codigo);
-          }}
-          onClose={() => setScannerAberto(false)}
-        />
-      )}
-
       <div style={styles.container}>
         <div style={styles.topBar}>
           <h2 style={{ color: "#FFD700" }}>📦 Leitor de Notas Fiscais</h2>
-          <button onClick={handleLogout} style={styles.logoutButton}>
-            🚪 Sair
-          </button>
+          <button onClick={handleLogout} style={styles.logoutButton}>🚪 Sair</button>
         </div>
         <p>
           <span style={{ color: "#ccc" }}>Usuário:</span>{" "}
@@ -184,12 +175,9 @@ export default function LeitorNota() {
           onKeyDown={handleLeitura}
           style={styles.input}
         />
-        {/* <button
-          onClick={() => setScannerAberto(true)}
-          style={styles.botaoCamera}
-        >
-          📷 Ler com Câmera
-        </button> */}
+        <button onClick={iniciarScanner} style={styles.botaoCamera}>📷 Ler com Câmera</button>
+
+        <div id="scanner" style={{ marginTop: 20 }} />
 
         {mensagem && (
           <div
