@@ -1,99 +1,126 @@
 import { useEffect, useRef } from "react";
-import { BrowserMultiFormatReader, BarcodeFormat } from "@zxing/library";
+import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from "@zxing/library";
 
 export default function ScannerCamera({ onResult, onClose }) {
   const videoRef = useRef(null);
-  const codeReader = useRef(null);
-  const bip = new Audio("/beep.mp3");
+  const beep = useRef(new Audio("/beep.mp3"));
 
   useEffect(() => {
-    codeReader.current = new BrowserMultiFormatReader();
+    const hints = new Map();
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.ITF,
+      BarcodeFormat.EAN_13,
+      BarcodeFormat.CODE_39
+    ]);
 
-    const iniciarLeitura = async () => {
+    const codeReader = new BrowserMultiFormatReader(hints);
+    let isScanning = true;
+
+    const startScanner = async () => {
       try {
-        const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-        if (devices.length === 0) throw new Error("Nenhuma câmera encontrada");
+        const constraints = {
+          video: {
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        };
 
-        const selectedDeviceId = devices[0].deviceId;
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
-        codeReader.current.decodeFromVideoDevice(
-          selectedDeviceId,
-          videoRef.current,
-          (result, err) => {
-            if (result) {
-              const texto = result.getText().trim();
-              if (texto.length === 44) {
-                bip.play();
-                codeReader.current.reset();
-                onResult(texto);
-              }
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.setAttribute("playsinline", true);
+          await videoRef.current.play();
+
+          codeReader.decodeFromVideoElementContinuously(videoRef.current, (result, err) => {
+            if (!isScanning) return;
+            if (result?.text?.length === 44) {
+              isScanning = false;
+              beep.current.play();
+              stopScanner();
+              onResult(result.text);
             }
-          }
-        );
-      } catch (error) {
-        console.error("Erro ao iniciar scanner:", error);
+          });
+        }
+      } catch (err) {
+        console.error("Erro ao acessar câmera:", err);
+        alert("Erro ao acessar a câmera. Verifique as permissões.");
         onClose();
       }
     };
 
-    iniciarLeitura();
-
-    return () => {
-      codeReader.current?.reset();
+    const stopScanner = () => {
+      codeReader.reset();
+      const stream = videoRef.current?.srcObject;
+      stream?.getTracks().forEach(track => track.stop());
     };
-  }, [onResult, onClose]);
+
+    startScanner();
+    return () => {
+      isScanning = false;
+      stopScanner();
+    };
+  }, []);
 
   return (
-    <div style={styles.overlay}>
-      <div style={styles.area}>
-        <video ref={videoRef} style={styles.video} />
-        <div style={styles.mira} />
-        <button onClick={onClose} style={styles.fechar}>❌ Fechar</button>
-      </div>
+    <div style={estilos.overlay}>
+      <video ref={videoRef} style={estilos.video} />
+      <div style={estilos.barra}></div>
+      <div style={estilos.texto}>📡 Escaneando código de barras...</div>
+      <button style={estilos.botao} onClick={onClose}>❌ Fechar</button>
     </div>
   );
 }
 
-const styles = {
+const estilos = {
   overlay: {
     position: "fixed",
-    top: 0, left: 0,
-    width: "100vw", height: "100vh",
-    backgroundColor: "rgba(0,0,0,0.9)",
+    inset: 0,
+    backgroundColor: "#000",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 9999,
-  },
-  area: {
-    position: "relative",
-    width: "100%",
-    maxWidth: "480px",
-    aspectRatio: "4/3",
-    overflow: "hidden",
-    borderRadius: "12px",
+    flexDirection: "column",
+    zIndex: 9999
   },
   video: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
+    width: "100vw",
+    height: "100vh",
+    objectFit: "cover"
   },
-  mira: {
+  barra: {
     position: "absolute",
-    top: "50%", left: "50%",
-    width: "80%", height: "80px",
-    transform: "translate(-50%, -50%)",
+    top: "calc(50% - 40px)",
+    left: "10%",
+    width: "80%",
+    height: "80px",
     border: "3px dashed #FFD700",
-    borderRadius: "8px",
+    borderRadius: "10px",
+    pointerEvents: "none"
   },
-  fechar: {
+  texto: {
     position: "absolute",
-    top: 10, right: 10,
+    bottom: "80px",
+    color: "#FFD700",
+    fontWeight: "bold",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    padding: "10px 20px",
+    borderRadius: "12px",
+    fontSize: "18px"
+  },
+  botao: {
+    position: "absolute",
+    top: 20,
+    right: 20,
     backgroundColor: "#e60000",
     color: "#fff",
-    padding: "8px 12px",
-    borderRadius: "8px",
     border: "none",
-    cursor: "pointer",
-  },
+    padding: "10px 14px",
+    borderRadius: "8px",
+    fontWeight: "bold",
+    cursor: "pointer"
+  }
 };

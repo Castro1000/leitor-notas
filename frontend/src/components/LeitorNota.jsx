@@ -13,7 +13,6 @@ export default function LeitorNota() {
   const [mostrarBotaoFinalizarPH, setMostrarBotaoFinalizarPH] = useState(false);
   const [mostrarBotaoFinalizarContainer, setMostrarBotaoFinalizarContainer] = useState(false);
   const [scannerAberto, setScannerAberto] = useState(false);
-
   const navigate = useNavigate();
   const usuario = JSON.parse(localStorage.getItem("usuarioLogado"))?.usuario || "";
   const bip = new Audio("/beep.mp3");
@@ -168,11 +167,9 @@ export default function LeitorNota() {
             style={{
               ...styles.mensagem,
               backgroundColor:
-                mensagemTipo === "erro"
-                  ? "#800000"
-                  : mensagemTipo === "finalizada"
-                  ? "#004d00"
-                  : "#333",
+                mensagemTipo === "erro" ? "#800000"
+                : mensagemTipo === "finalizada" ? "#004d00"
+                : "#333",
               color: mensagemTipo === "finalizada" ? "#00FF99" : "#FFD700",
             }}
           >
