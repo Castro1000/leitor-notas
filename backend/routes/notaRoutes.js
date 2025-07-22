@@ -99,30 +99,38 @@ router.post('/gravar-nota', autenticarToken, async (req, res) => {
   }
 });
 
-// ==================== FINALIZAR NOTA ====================
-router.put('/finalizar-nota/:id', autenticarToken, async (req, res) => {
-  const { id } = req.params;
-  try {
-    await db.query('UPDATE notas_fiscais SET status = ?, data_entrega = NOW() WHERE id = ?', ['FINALIZADA', id]);
-    return res.json({ message: 'Nota finalizada com sucesso!' });
-  } catch (error) {
-    return res.status(500).json({ message: 'Erro ao finalizar nota', error });
-  }
-});
-
 // ==================== FINALIZAR CONTAINER ====================
 router.put('/finalizar-container/:id', autenticarToken, async (req, res) => {
   const { id } = req.params;
+  const usuario_logado = req.usuario.usuario;
+
+  if (usuario_logado !== 'operador') {
+    return res.status(403).json({ message: 'Usuário não autorizado a finalizar o container.' });
+  }
 
   try {
     await db.query(
-      'UPDATE notas_fiscais SET status = ?, data_logistica_fim = NOW() WHERE id = ?',
+      'UPDATE notas_fiscais SET status = ?, data_logistica = NOW() WHERE id = ?',
       ['CONTAINER FINALIZADO', id]
     );
     return res.json({ message: 'Container finalizado com sucesso!' });
   } catch (error) {
     console.error('Erro ao finalizar container:', error);
     return res.status(500).json({ message: 'Erro ao finalizar container', error });
+  }
+});
+
+// ==================== FINALIZAR NOTA ====================
+router.put('/finalizar-nota/:id', autenticarToken, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query(
+      'UPDATE notas_fiscais SET status = ?, data_entrega = NOW() WHERE id = ?',
+      ['FINALIZADA', id]
+    );
+    return res.json({ message: 'Nota finalizada com sucesso!' });
+  } catch (error) {
+    return res.status(500).json({ message: 'Erro ao finalizar nota', error });
   }
 });
 
@@ -172,11 +180,17 @@ router.put('/usuarios/:id', autenticarToken, async (req, res) => {
 router.post('/login', async (req, res) => {
   const { usuario, senha } = req.body;
   try {
-    const [usuarios] = await db.query('SELECT * FROM usuarios WHERE usuario = ? AND senha = ?', [usuario, senha]);
-    if (usuarios.length === 0) return res.status(401).json({ message: 'Usuário ou senha inválidos' });
+    const [usuarios] = await db.query(
+      'SELECT * FROM usuarios WHERE usuario = ? AND senha = ?',
+      [usuario, senha]
+    );
+    if (usuarios.length === 0)
+      return res.status(401).json({ message: 'Usuário ou senha inválidos' });
 
     const payload = { id: usuarios[0].id, usuario: usuarios[0].usuario };
-    const token = jwt.sign(payload, process.env.JWT_SECRET || 'segredo123', { expiresIn: '2h' });
+    const token = jwt.sign(payload, process.env.JWT_SECRET || 'segredo123', {
+      expiresIn: '2h',
+    });
 
     return res.json({ message: 'Login bem-sucedido', usuario: usuarios[0], token });
   } catch (error) {

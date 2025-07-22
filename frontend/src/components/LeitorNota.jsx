@@ -51,14 +51,14 @@ export default function LeitorNota() {
 
       if (data.status === "EM ANDAMENTO") {
         setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
-        setMensagemFluxo("🟡 Aguardando OPERADOR bipar a nota.");
+        setMensagemFluxo("🟡 Aguardando setor de LOGÍSTICA bipar a nota.");
       } else if (data.status === "CONTAINER SENDO OVADO") {
         setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
-        setMensagemFluxo("🔵 Aguardando OPERADOR finalizar container.");
+        setMensagemFluxo("🔵 Aguardando LOGÍSTICA finalizar container.");
         if (usuario === "operador") setMostrarBotaoFinalizarContainer(true);
       } else if (data.status === "CONTAINER FINALIZADO") {
         setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
-        setMensagemFluxo("🔵 Aguardando VALIDADOR finalizar.");
+        setMensagemFluxo("🔵 Aguardando PH finalizar.");
         if (usuario === "validador") setMostrarBotaoFinalizarPH(true);
       } else if (data.status === "FINALIZADA") {
         const finalizada = new Date(data.nota?.data_entrega || data.nota?.data_registro);
@@ -82,15 +82,15 @@ export default function LeitorNota() {
           setMensagemTipo("finalizada");
         } else if (notaRecebida.status === "CONTAINER FINALIZADO") {
           setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
-          setMensagemFluxo("🔵 Aguardando VALIDADOR finalizar.");
+          setMensagemFluxo("🔵 Aguardando PH finalizar.");
           if (usuario === "validador") setMostrarBotaoFinalizarPH(true);
         } else if (notaRecebida.status === "CONTAINER SENDO OVADO") {
           setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
-          setMensagemFluxo("🔵 Aguardando OPERADOR finalizar container.");
+          setMensagemFluxo("🔵 Aguardando LOGÍSTICA finalizar container.");
           if (usuario === "operador") setMostrarBotaoFinalizarContainer(true);
         } else if (notaRecebida.status === "EM ANDAMENTO") {
           setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
-          setMensagemFluxo("🟡 Aguardando OPERADOR bipar a nota.");
+          setMensagemFluxo("🟡 Aguardando setor de LOGÍSTICA bipar a nota.");
         }
       } else {
         setMensagem(data?.message ? `⚠️ ${data.message}` : "❌ Erro ao processar a chave");
@@ -114,20 +114,34 @@ export default function LeitorNota() {
 
   const finalizarNota = async () => {
     if (!nota?.id) return;
-    await api.put(`/api/finalizar-nota/${nota.id}`);
-    setStatus("FINALIZADA");
-    setMostrarBotaoFinalizarPH(false);
-    setMensagem("✅ Nota finalizada com sucesso!");
-    setMensagemFluxo("✅ Nota encerrada.");
-    setMensagemTipo("finalizada");
+    try {
+      await api.put(`/api/finalizar-nota/${nota.id}`);
+      setStatus("FINALIZADA");
+      setMostrarBotaoFinalizarPH(false);
+      setMensagem("✅ Nota finalizada com sucesso!");
+      setMensagemFluxo("✅ Nota encerrada.");
+      setMensagemTipo("finalizada");
+    } catch (error) {
+      console.error("Erro ao finalizar nota:", error);
+      setMensagem("❌ Erro ao finalizar nota");
+      setMensagemTipo("erro");
+    }
   };
 
   const finalizarContainer = async () => {
     if (!nota?.id) return;
-    await api.put(`/api/finalizar-container/${nota.id}`);
-    setStatus("CONTAINER FINALIZADO");
-    setMostrarBotaoFinalizarContainer(false);
-    setMensagemFluxo("🔵 Aguardando VALIDADOR finalizar.");
+    try {
+      await api.put(`/api/finalizar-container/${nota.id}`);
+      setStatus("CONTAINER FINALIZADO");
+      setMostrarBotaoFinalizarContainer(false);
+      setMensagem("📦 Container finalizado com sucesso!");
+      setMensagemFluxo("🔵 Aguardando PH finalizar.");
+      setMensagemTipo("info");
+    } catch (error) {
+      console.error("Erro ao finalizar container:", error);
+      setMensagem("❌ Erro ao finalizar o container");
+      setMensagemTipo("erro");
+    }
   };
 
   return (
