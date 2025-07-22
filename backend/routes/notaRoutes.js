@@ -121,7 +121,6 @@ router.get('/listar-notas', autenticarToken, async (req, res) => {
 
 // ==================== LOGIN COM TOKEN ====================
 
-const jwt = require('jsonwebtoken');
 
 router.post('/login', async (req, res) => {
   const { usuario, senha } = req.body;
