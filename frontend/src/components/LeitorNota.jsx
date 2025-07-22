@@ -168,13 +168,13 @@ export default function LeitorNota() {
         <input
           ref={inputRef}
           type="text"
-          placeholder="Bipe ou escaneie a nota fiscal"
+          placeholder="Escaneie a nota fiscal"
           onKeyDown={handleLeitura}
           style={styles.input}
         />
-        <button onClick={() => setScannerAberto(true)} style={styles.botaoCamera}>
+        {/*<button onClick={() => setScannerAberto(true)} style={styles.botaoCamera}>
           📷 Ler com Câmera
-        </button>
+        </button>*/}
 
         {mensagem && (
           <div
