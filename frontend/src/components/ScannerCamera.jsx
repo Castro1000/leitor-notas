@@ -1,67 +1,71 @@
 import { useEffect, useRef } from "react";
-import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from "@zxing/library";
+import { BrowserMultiFormatReader } from "@zxing/browser";
+import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 
 export default function ScannerCamera({ onResult, onClose }) {
   const videoRef = useRef(null);
   const beep = useRef(new Audio("/beep.mp3"));
+  const codeReader = useRef(null);
 
   useEffect(() => {
     const hints = new Map();
     hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-      BarcodeFormat.CODE_128,
       BarcodeFormat.ITF,
-      BarcodeFormat.EAN_13,
-      BarcodeFormat.CODE_39
+      BarcodeFormat.CODE_128,
+      BarcodeFormat.CODE_39,
+      BarcodeFormat.EAN_13
     ]);
 
-    const codeReader = new BrowserMultiFormatReader(hints);
-    let isScanning = true;
+    const reader = new BrowserMultiFormatReader(hints);
+    codeReader.current = reader;
+    let scanning = true;
 
-    const startScanner = async () => {
+    const start = async () => {
       try {
         const constraints = {
           video: {
-            facingMode: "environment",
+            facingMode: { ideal: "environment" },
             width: { ideal: 1280 },
-            height: { ideal: 720 }
+            height: { ideal: 720 },
+            focusMode: "continuous",
           },
-          audio: false
+          audio: false,
         };
 
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.setAttribute("playsinline", true);
           await videoRef.current.play();
 
-          codeReader.decodeFromVideoElementContinuously(videoRef.current, (result, err) => {
-            if (!isScanning) return;
-            if (result?.text?.length === 44) {
-              isScanning = false;
+          reader.decodeFromVideoElementContinuously(videoRef.current, (result, err) => {
+            if (!scanning) return;
+            if (result?.text && result.text.length >= 40) {
+              scanning = false;
               beep.current.play();
-              stopScanner();
-              onResult(result.text);
+              stop();
+              onResult(result.text.trim());
             }
           });
         }
       } catch (err) {
-        console.error("Erro ao acessar câmera:", err);
-        alert("Erro ao acessar a câmera. Verifique as permissões.");
+        console.error("Erro ao acessar a câmera:", err);
+        alert("Erro ao acessar a câmera. Verifique permissões.");
         onClose();
       }
     };
 
-    const stopScanner = () => {
-      codeReader.reset();
+    const stop = () => {
+      reader.reset();
       const stream = videoRef.current?.srcObject;
-      stream?.getTracks().forEach(track => track.stop());
+      stream?.getTracks().forEach((track) => track.stop());
     };
 
-    startScanner();
+    start();
+
     return () => {
-      isScanning = false;
-      stopScanner();
+      scanning = false;
+      stop();
     };
   }, []);
 
@@ -69,8 +73,8 @@ export default function ScannerCamera({ onResult, onClose }) {
     <div style={estilos.overlay}>
       <video ref={videoRef} style={estilos.video} />
       <div style={estilos.barra}></div>
-      <div style={estilos.texto}>📡 Escaneando código de barras...</div>
-      <button style={estilos.botao} onClick={onClose}>❌ Fechar</button>
+      <div style={estilos.mensagem}>📡 Escaneando código de barras...</div>
+      <button onClick={onClose} style={estilos.botaoFechar}>❌ Fechar</button>
     </div>
   );
 }
@@ -80,47 +84,47 @@ const estilos = {
     position: "fixed",
     inset: 0,
     backgroundColor: "#000",
+    zIndex: 9999,
     display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
     flexDirection: "column",
-    zIndex: 9999
+    alignItems: "center",
+    justifyContent: "center"
   },
   video: {
     width: "100vw",
     height: "100vh",
-    objectFit: "cover"
+    objectFit: "cover",
   },
   barra: {
     position: "absolute",
-    top: "calc(50% - 40px)",
+    top: "calc(50% - 50px)",
     left: "10%",
     width: "80%",
-    height: "80px",
-    border: "3px dashed #FFD700",
-    borderRadius: "10px",
-    pointerEvents: "none"
-  },
-  texto: {
-    position: "absolute",
-    bottom: "80px",
-    color: "#FFD700",
-    fontWeight: "bold",
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    padding: "10px 20px",
+    height: "100px",
+    border: "3px dashed yellow",
     borderRadius: "12px",
+    pointerEvents: "none",
+  },
+  mensagem: {
+    position: "absolute",
+    bottom: 80,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    color: "#FFD700",
+    padding: "10px 20px",
+    borderRadius: "10px",
+    fontWeight: "bold",
     fontSize: "18px"
   },
-  botao: {
+  botaoFechar: {
     position: "absolute",
     top: 20,
     right: 20,
-    backgroundColor: "#e60000",
-    color: "#fff",
+    backgroundColor: "red",
+    color: "white",
+    fontSize: "16px",
+    padding: "8px 12px",
     border: "none",
-    padding: "10px 14px",
     borderRadius: "8px",
-    fontWeight: "bold",
     cursor: "pointer"
   }
 };
