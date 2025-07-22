@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import {
+  Html5QrcodeScanner,
+  Html5QrcodeScanType
+} from "html5-qrcode";
 
 export default function LeitorNota() {
   const inputRef = useRef();
@@ -29,12 +32,22 @@ export default function LeitorNota() {
 
   const iniciarScanner = () => {
     setScannerAberto(true);
-    const scanner = new Html5QrcodeScanner("scanner", {
-      fps: 10,
-      qrbox: 250,
-      rememberLastUsedCamera: true,
-      supportedScanTypes: [Html5QrcodeScanner.SCAN_TYPE_CAMERA]
-    }, false);
+
+    if (scannerRef.current) {
+      scannerRef.current.clear();
+      scannerRef.current = null;
+    }
+
+    const scanner = new Html5QrcodeScanner(
+      "scanner",
+      {
+        fps: 10,
+        qrbox: 250,
+        rememberLastUsedCamera: true,
+        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+      },
+      false
+    );
 
     scanner.render(
       (decodedText) => {
@@ -175,7 +188,9 @@ export default function LeitorNota() {
           onKeyDown={handleLeitura}
           style={styles.input}
         />
-        <button onClick={iniciarScanner} style={styles.botaoCamera}>📷 Ler com Câmera</button>
+        <button onClick={iniciarScanner} style={styles.botaoCamera}>
+          📷 Ler com Câmera
+        </button>
 
         <div id="scanner" style={{ marginTop: 20 }} />
 

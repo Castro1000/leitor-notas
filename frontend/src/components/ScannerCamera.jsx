@@ -1,43 +1,41 @@
 import { useEffect } from "react";
 import { Html5Qrcode } from "html5-qrcode";
+import "html5-qrcode/minified/html5-qrcode.min.css";
+
 
 export default function ScannerCamera({ onResult, onClose }) {
   useEffect(() => {
-    const scannerId = "reader";
-    const beep = new Audio("/beep.mp3");
-
+    const scannerId = "scanner";
     const html5QrCode = new Html5Qrcode(scannerId);
-    const config = {
-      fps: 10,
-      qrbox: { width: 300, height: 150 },
-      formatsToSupport: ["CODE_128", "EAN_13", "CODE_39", "ITF"],
-    };
 
-    Html5Qrcode.getCameras()
-      .then((devices) => {
-        if (devices && devices.length) {
-          const cameraId = devices[0].id;
-          html5QrCode.start(
+    const config = { fps: 10, qrbox: { width: 250, height: 100 } };
+
+    Html5Qrcode.getCameras().then((devices) => {
+      if (devices && devices.length) {
+        const cameraId = devices[0].id;
+
+        html5QrCode
+          .start(
             cameraId,
             config,
             (decodedText) => {
               if (decodedText.length === 44) {
-                beep.play();
+                new Audio("/beep.mp3").play();
                 html5QrCode.stop().then(() => {
                   onResult(decodedText);
                 });
               }
             },
-            (errorMessage) => {
-              // silencioso
+            (error) => {
+              // Ignorar erros de leitura
             }
-          );
-        }
-      })
-      .catch((err) => {
-        alert("Erro ao acessar a câmera. Verifique permissões.");
-        onClose();
-      });
+          )
+          .catch((err) => {
+            console.error("Erro ao iniciar scanner:", err);
+            onClose();
+          });
+      }
+    });
 
     return () => {
       html5QrCode.stop().catch(() => {});
@@ -46,8 +44,11 @@ export default function ScannerCamera({ onResult, onClose }) {
 
   return (
     <div style={estilos.overlay}>
-      <div id="reader" style={estilos.leitor}></div>
-      <button onClick={onClose} style={estilos.botaoFechar}>❌ Fechar</button>
+      <div id="scanner" style={estilos.video}></div>
+      <div style={estilos.mensagem}>📡 Escaneando nota...</div>
+      <button style={estilos.botao} onClick={onClose}>
+        ❌ Fechar
+      </button>
     </div>
   );
 }
@@ -59,23 +60,28 @@ const estilos = {
     backgroundColor: "#000",
     zIndex: 9999,
     display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
     flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  leitor: {
+  video: {
     width: "100%",
-    maxWidth: "500px",
-    height: "350px",
+    maxWidth: "480px",
   },
-  botaoFechar: {
+  mensagem: {
+    marginTop: "10px",
+    color: "#FFD700",
+    fontWeight: "bold",
+    fontSize: "18px",
+  },
+  botao: {
     marginTop: "20px",
+    padding: "10px 20px",
     backgroundColor: "#e60000",
     color: "#fff",
-    padding: "10px 20px",
     border: "none",
     borderRadius: "8px",
-    fontWeight: "bold",
+    fontSize: "16px",
     cursor: "pointer",
   },
 };
