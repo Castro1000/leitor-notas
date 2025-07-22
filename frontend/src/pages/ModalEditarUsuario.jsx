@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "../services/api";
 
 export default function ModalEditarUsuario({ usuario, aoFechar, aoSalvar }) {
@@ -7,6 +7,11 @@ export default function ModalEditarUsuario({ usuario, aoFechar, aoSalvar }) {
     senha: "",
   });
   const [salvando, setSalvando] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo(0, 0); // garantir foco no topo
+    console.log("Abrindo modal para:", usuario);
+  }, [usuario]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -71,12 +76,12 @@ const estilos = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     padding: "10px",
-    zIndex: 9999,
+    zIndex: 10000,
   },
   modal: {
     backgroundColor: "#222",

@@ -42,7 +42,13 @@ export default function ModalUsuarios({ aberto, aoFechar }) {
                   <td style={estilos.td}>{u.id}</td>
                   <td style={estilos.td}>{u.usuario}</td>
                   <td style={estilos.td}>
-                    <button style={estilos.botaoEditar} onClick={() => setUsuarioSelecionado(u)}>
+                    <button
+                      style={estilos.botaoEditar}
+                      onClick={() => {
+                        console.log("Selecionando usuário para edição:", u);
+                        setUsuarioSelecionado(u);
+                      }}
+                    >
                       Editar
                     </button>
                   </td>
@@ -79,7 +85,7 @@ const estilos = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 9999,
+    zIndex: 9998,
     padding: "10px",
   },
   modal: {
@@ -90,6 +96,8 @@ const estilos = {
     width: "100%",
     maxWidth: "600px",
     boxSizing: "border-box",
+    position: "relative",
+    zIndex: 9999,
   },
   titulo: {
     color: "#FFD700",
@@ -137,3 +145,4 @@ const estilos = {
     fontWeight: "bold",
   },
 };
+  

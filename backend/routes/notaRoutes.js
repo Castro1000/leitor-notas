@@ -3,22 +3,21 @@ const router = express.Router();
 const db = require('../database/connection');
 const jwt = require('jsonwebtoken');
 
-// Middleware para verificar token
+// ==================== MIDDLEWARE DE AUTENTICAÇÃO ====================
 const autenticarToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) return res.status(401).json({ message: 'Token não fornecido' });
 
-  jwt.verify(token, process.env.JWT_SECRET || 'segredo123', (err, usuario) => {
+  jwt.verify(token, process.env.JWT_SECRET, (err, usuario) => {
     if (err) return res.status(403).json({ message: 'Token inválido' });
     req.usuario = usuario;
     next();
   });
 };
 
-// ==================== ROTAS DE NOTAS ====================
-
+// ==================== GRAVAR NOTA ====================
 router.post('/gravar-nota', autenticarToken, async (req, res) => {
   const {
     chave_acesso, numero_nota, emitente_nome, emitente_cnpj,
@@ -100,6 +99,7 @@ router.post('/gravar-nota', autenticarToken, async (req, res) => {
   }
 });
 
+// ==================== FINALIZAR NOTA ====================
 router.put('/finalizar-nota/:id', autenticarToken, async (req, res) => {
   const { id } = req.params;
   try {
@@ -110,6 +110,7 @@ router.put('/finalizar-nota/:id', autenticarToken, async (req, res) => {
   }
 });
 
+// ==================== LISTAR NOTAS ====================
 router.get('/listar-notas', autenticarToken, async (req, res) => {
   try {
     const [notas] = await db.query('SELECT * FROM notas_fiscais ORDER BY data_registro DESC');
@@ -119,9 +120,18 @@ router.get('/listar-notas', autenticarToken, async (req, res) => {
   }
 });
 
-// ==================== LOGIN COM TOKEN ====================
+// ==================== LISTAR USUÁRIOS ====================
+router.get('/usuarios', autenticarToken, async (req, res) => {
+  try {
+    const [usuarios] = await db.query('SELECT id, usuario FROM usuarios ORDER BY id');
+    res.json(usuarios);
+  } catch (error) {
+    console.error('Erro ao buscar usuários:', error);
+    res.status(500).json({ message: 'Erro ao buscar usuários' });
+  }
+});
 
-
+// ==================== LOGIN ====================
 router.post('/login', async (req, res) => {
   const { usuario, senha } = req.body;
   try {
@@ -129,15 +139,12 @@ router.post('/login', async (req, res) => {
     if (usuarios.length === 0) return res.status(401).json({ message: 'Usuário ou senha inválidos' });
 
     const payload = { id: usuarios[0].id, usuario: usuarios[0].usuario };
-    const token = jwt.sign(payload, process.env.JWT_SECRET || 'segredo123', { expiresIn: '2h' });
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '2h' });
 
     return res.json({ message: 'Login bem-sucedido', usuario: usuarios[0], token });
   } catch (error) {
     return res.status(500).json({ message: 'Erro ao fazer login', error });
   }
 });
-
-// ==================== OUTRAS ROTAS ====================
-// ... manter as demais rotas existentes protegidas com `autenticarToken`
 
 module.exports = router;

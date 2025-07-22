@@ -137,6 +137,8 @@ export default function AdminPainel() {
     return new Date(b[ordenarPor]) - new Date(a[ordenarPor]);
   };
 
+  console.log("abrirConfig:", abrirConfig);
+
   return (
     <div className="painel-container">
       <div className="painel-header">
