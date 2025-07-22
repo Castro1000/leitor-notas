@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
-import {
-  Html5QrcodeScanner,
-  Html5QrcodeScanType
-} from "html5-qrcode";
+import { Html5QrcodeScanner } from "html5-qrcode";
 
 export default function LeitorNota() {
   const inputRef = useRef();
@@ -32,30 +29,24 @@ export default function LeitorNota() {
 
   const iniciarScanner = () => {
     setScannerAberto(true);
-
-    if (scannerRef.current) {
-      scannerRef.current.clear();
-      scannerRef.current = null;
-    }
-
     const scanner = new Html5QrcodeScanner(
       "scanner",
       {
         fps: 10,
         qrbox: 250,
         rememberLastUsedCamera: true,
-        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
       },
       false
     );
 
     scanner.render(
       (decodedText) => {
-        if (decodedText.length === 44) {
+        const chaveLimpa = decodedText.replace(/\D/g, "").trim(); // remove tudo que não for número
+        if (chaveLimpa.length === 44) {
           bip.play();
           scanner.clear();
           setScannerAberto(false);
-          processarChave(decodedText);
+          processarChave(chaveLimpa);
         }
       },
       (error) => {
@@ -81,7 +72,6 @@ export default function LeitorNota() {
         usuario_logado: usuario.toLowerCase(),
       });
 
-      bip.play();
       const registro = new Date(data.nota?.data_registro);
       const dataFormatada = registro.toLocaleDateString();
       const horaFormatada = registro.toLocaleTimeString();
@@ -142,7 +132,7 @@ export default function LeitorNota() {
 
   const handleLeitura = (e) => {
     if (e.key === "Enter") {
-      const chave = e.target.value.trim();
+      const chave = e.target.value.replace(/\D/g, "").trim(); // limpa tudo que não for número
       inputRef.current.value = "";
       if (chave.length === 44) processarChave(chave);
       else {
@@ -177,10 +167,12 @@ export default function LeitorNota() {
           <h2 style={{ color: "#FFD700" }}>📦 Leitor de Notas Fiscais</h2>
           <button onClick={handleLogout} style={styles.logoutButton}>🚪 Sair</button>
         </div>
+
         <p>
           <span style={{ color: "#ccc" }}>Usuário:</span>{" "}
           <span style={{ color: "#FFD700" }}>{usuario.toUpperCase()}</span>
         </p>
+
         <input
           ref={inputRef}
           type="text"
@@ -188,6 +180,7 @@ export default function LeitorNota() {
           onKeyDown={handleLeitura}
           style={styles.input}
         />
+
         <button onClick={iniciarScanner} style={styles.botaoCamera}>
           📷 Ler com Câmera
         </button>
