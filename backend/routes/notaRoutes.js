@@ -10,7 +10,7 @@ const autenticarToken = (req, res, next) => {
 
   if (!token) return res.status(401).json({ message: 'Token não fornecido' });
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, usuario) => {
+  jwt.verify(token, process.env.JWT_SECRET || 'segredo123', (err, usuario) => {
     if (err) return res.status(403).json({ message: 'Token inválido' });
     req.usuario = usuario;
     next();
@@ -131,6 +131,27 @@ router.get('/usuarios', autenticarToken, async (req, res) => {
   }
 });
 
+// ==================== ATUALIZAR USUÁRIO ====================
+router.put('/usuarios/:id', autenticarToken, async (req, res) => {
+  const { id } = req.params;
+  const { usuario, senha } = req.body;
+
+  if (!usuario || !senha) {
+    return res.status(400).json({ message: 'Usuário e senha são obrigatórios' });
+  }
+
+  try {
+    await db.query(
+      'UPDATE usuarios SET usuario = ?, senha = ? WHERE id = ?',
+      [usuario, senha, id]
+    );
+    res.json({ message: 'Usuário atualizado com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao atualizar usuário:', error);
+    res.status(500).json({ message: 'Erro ao atualizar usuário', error });
+  }
+});
+
 // ==================== LOGIN ====================
 router.post('/login', async (req, res) => {
   const { usuario, senha } = req.body;
@@ -139,7 +160,7 @@ router.post('/login', async (req, res) => {
     if (usuarios.length === 0) return res.status(401).json({ message: 'Usuário ou senha inválidos' });
 
     const payload = { id: usuarios[0].id, usuario: usuarios[0].usuario };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '2h' });
+    const token = jwt.sign(payload, process.env.JWT_SECRET || 'segredo123', { expiresIn: '2h' });
 
     return res.json({ message: 'Login bem-sucedido', usuario: usuarios[0], token });
   } catch (error) {
