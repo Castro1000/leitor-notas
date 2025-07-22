@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
-import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from "@zxing/library";
+import ScannerCamera from "./ScannerCamera";
 
 export default function LeitorNota() {
   const inputRef = useRef();
-  const videoRef = useRef(null);
-  const readerRef = useRef(null);
-  const streamRef = useRef(null);
-
   const [mensagem, setMensagem] = useState("");
   const [mensagemTipo, setMensagemTipo] = useState("info");
   const [mensagemFluxo, setMensagemFluxo] = useState("");
@@ -28,57 +24,6 @@ export default function LeitorNota() {
   const handleLogout = () => {
     localStorage.removeItem("usuarioLogado");
     navigate("/");
-  };
-
-  const iniciarScanner = async () => {
-    setScannerAberto(true);
-    const hints = new Map();
-    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-      BarcodeFormat.CODE_128,
-      BarcodeFormat.ITF,
-      BarcodeFormat.CODE_39,
-      BarcodeFormat.EAN_13
-    ]);
-
-    const reader = new BrowserMultiFormatReader(hints);
-    readerRef.current = reader;
-
-    try {
-      const constraints = {
-        video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: false
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-
-        reader.decodeFromVideoDevice(null, videoRef.current, (result, err) => {
-          if (result?.text && result.text.length === 44) {
-            pararScanner();
-            bip.play();
-            processarChave(result.text);
-          }
-        });
-      }
-    } catch (err) {
-      console.error("Erro ao acessar câmera:", err);
-      alert("Erro ao acessar a câmera. Verifique permissões.");
-      pararScanner();
-    }
-  };
-
-  const pararScanner = () => {
-    readerRef.current?.reset();
-    const stream = streamRef.current;
-    stream?.getTracks().forEach(track => track.stop());
-    setScannerAberto(false);
   };
 
   const processarChave = async (chave) => {
@@ -187,17 +132,25 @@ export default function LeitorNota() {
 
   return (
     <div style={styles.wrapper}>
+      {scannerAberto && (
+        <ScannerCamera
+          onResult={(codigo) => {
+            setScannerAberto(false);
+            processarChave(codigo);
+          }}
+          onClose={() => setScannerAberto(false)}
+        />
+      )}
+
       <div style={styles.container}>
         <div style={styles.topBar}>
           <h2 style={{ color: "#FFD700" }}>📦 Leitor de Notas Fiscais</h2>
           <button onClick={handleLogout} style={styles.logoutButton}>🚪 Sair</button>
         </div>
-
         <p>
           <span style={{ color: "#ccc" }}>Usuário:</span>{" "}
           <span style={{ color: "#FFD700" }}>{usuario.toUpperCase()}</span>
         </p>
-
         <input
           ref={inputRef}
           type="text"
@@ -205,23 +158,18 @@ export default function LeitorNota() {
           onKeyDown={handleLeitura}
           style={styles.input}
         />
-
-        <button onClick={iniciarScanner} style={styles.botaoCamera}>
+        <button onClick={() => setScannerAberto(true)} style={styles.botaoCamera}>
           📷 Ler com Câmera
         </button>
-
-        {scannerAberto && (
-          <div style={styles.scannerBox}>
-            <video ref={videoRef} style={styles.video} />
-          </div>
-        )}
 
         {mensagem && (
           <div
             style={{
               ...styles.mensagem,
-              backgroundColor: mensagemTipo === "erro" ? "#800000" :
-                mensagemTipo === "finalizada" ? "#004d00" : "#333",
+              backgroundColor:
+                mensagemTipo === "erro" ? "#800000"
+                : mensagemTipo === "finalizada" ? "#004d00"
+                : "#333",
               color: mensagemTipo === "finalizada" ? "#00FF99" : "#FFD700",
             }}
           >
@@ -302,18 +250,6 @@ const styles = {
     borderRadius: "10px",
     fontSize: "16px",
     cursor: "pointer",
-  },
-  scannerBox: {
-    marginTop: 20,
-    border: "3px dashed #FFD700",
-    borderRadius: "12px",
-    overflow: "hidden",
-    position: "relative",
-  },
-  video: {
-    width: "100%",
-    height: "auto",
-    objectFit: "cover",
   },
   mensagem: {
     marginTop: "20px",

@@ -1,81 +1,78 @@
 import { useEffect, useRef } from "react";
-import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from "@zxing/library";
+import { BrowserMultiFormatReader } from "@zxing/library";
 
 export default function ScannerCamera({ onResult, onClose }) {
   const videoRef = useRef(null);
-  const readerRef = useRef(null);
+  const reader = useRef(new BrowserMultiFormatReader());
   const bip = useRef(new Audio("/beep.mp3"));
+  let scanning = true;
 
   useEffect(() => {
-    const hints = new Map();
-    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-      BarcodeFormat.CODE_128,
-      BarcodeFormat.ITF,
-      BarcodeFormat.CODE_39,
-      BarcodeFormat.EAN_13
-    ]);
+    startCamera();
 
-    const reader = new BrowserMultiFormatReader(hints);
-    readerRef.current = reader;
+    return () => stopCamera();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    let scanning = true;
+  const startCamera = async () => {
+    try {
+      const constraints = {
+        video: {
+          facingMode: { exact: "environment" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          focusMode: "continuous",
+          advanced: [{ focusMode: "continuous" }],
+        },
+        audio: false,
+      };
 
-    const startCamera = async () => {
-      try {
-        const constraints = {
-          video: {
-            facingMode: "environment",
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute("playsinline", true);
+        await videoRef.current.play();
 
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.setAttribute("playsinline", true);
-          await videoRef.current.play();
-
-          reader.decodeFromVideoElementContinuously(videoRef.current, (result, err) => {
+        reader.current.decodeFromVideoElementContinuously(
+          videoRef.current,
+          (result, err) => {
             if (!scanning) return;
-
             if (result?.text && result.text.length === 44) {
               scanning = false;
               bip.current.play();
               stopCamera();
               onResult(result.text);
             }
-          });
-        }
-      } catch (error) {
-        console.error("Erro ao acessar câmera:", error);
-        alert("Erro ao acessar a câmera.");
-        stopCamera();
-        onClose();
+          }
+        );
       }
-    };
-
-    const stopCamera = () => {
-      reader.reset();
-      const stream = videoRef.current?.srcObject;
-      stream?.getTracks().forEach((track) => track.stop());
-    };
-
-    startCamera();
-
-    return () => {
-      scanning = false;
+    } catch (error) {
+      console.error("Erro ao acessar câmera:", error);
+      alert("Erro ao acessar a câmera.");
       stopCamera();
-    };
-  }, []);
+      onClose();
+    }
+  };
+
+  const stopCamera = () => {
+    reader.current.reset();
+    if (videoRef.current?.srcObject) {
+      const tracks = videoRef.current.srcObject.getTracks();
+      tracks.forEach((track) => track.stop());
+      videoRef.current.srcObject = null;
+    }
+  };
 
   return (
     <div style={estilos.overlay}>
       <video ref={videoRef} style={estilos.video} />
-      <div style={estilos.barra}></div>
-      <div style={estilos.info}>📡 Escaneando código de barras da nota...</div>
-      <button style={estilos.fechar} onClick={onClose}>❌ Fechar</button>
+      <div style={estilos.barra} />
+      <button style={estilos.botaoFechar} onClick={() => {
+        stopCamera();
+        onClose();
+      }}>
+        ✖ Fechar
+      </button>
     </div>
   );
 }
@@ -83,49 +80,44 @@ export default function ScannerCamera({ onResult, onClose }) {
 const estilos = {
   overlay: {
     position: "fixed",
-    inset: 0,
-    backgroundColor: "#000",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 9999,
-  },
-  video: {
+    top: 0,
+    left: 0,
     width: "100vw",
     height: "100vh",
+    backgroundColor: "#000",
+    zIndex: 9999,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "column",
+  },
+  video: {
+    width: "100%",
+    height: "100%",
     objectFit: "cover",
   },
   barra: {
     position: "absolute",
-    top: "calc(50% - 40px)",
+    top: "40%",
     left: "10%",
     width: "80%",
     height: "80px",
     border: "3px dashed #FFD700",
-    borderRadius: "12px",
+    borderRadius: "8px",
     pointerEvents: "none",
   },
-  info: {
-    position: "absolute",
-    bottom: "70px",
-    color: "#FFD700",
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    padding: "10px 20px",
-    borderRadius: "10px",
-    fontSize: "16px",
-    fontWeight: "bold",
-  },
-  fechar: {
+  botaoFechar: {
     position: "absolute",
     top: 20,
     right: 20,
-    padding: "10px 14px",
+    padding: "10px 18px",
     fontSize: "16px",
+    borderRadius: "8px",
+    border: "none",
     backgroundColor: "#e60000",
     color: "#fff",
-    border: "none",
-    borderRadius: "8px",
+    fontWeight: "bold",
     cursor: "pointer",
+    zIndex: 10000,
   },
 };
