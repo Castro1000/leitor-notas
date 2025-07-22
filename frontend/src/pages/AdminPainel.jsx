@@ -4,6 +4,8 @@ import api from "../services/api";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import "./AdminPainel.css";
+import ModalUsuarios from "./ModalUsuarios";
 
 export default function AdminPainel() {
   const [notas, setNotas] = useState([]);
@@ -13,8 +15,6 @@ export default function AdminPainel() {
   const [buscaNumero, setBuscaNumero] = useState("");
   const [mostrarExportar, setMostrarExportar] = useState(false);
   const [abrirConfig, setAbrirConfig] = useState(false);
-  const [usuarios, setUsuarios] = useState([]);
-  const [editar, setEditar] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,30 +35,13 @@ export default function AdminPainel() {
     };
 
     buscarNotas();
-
     const hoje = new Date().toISOString().slice(0, 10);
     let intervalo;
     if (dataFiltro === hoje && !buscaNumero) {
       intervalo = setInterval(buscarNotas, 5000);
     }
-    return () => {
-      if (intervalo) clearInterval(intervalo);
-    };
+    return () => intervalo && clearInterval(intervalo);
   }, [dataFiltro, buscaNumero]);
-
-  useEffect(() => {
-    if (abrirConfig) {
-      const buscarUsuarios = async () => {
-        try {
-          const { data } = await api.get("/api/usuarios");
-          setUsuarios(data);
-        } catch (error) {
-          console.error("Erro ao buscar usuários:", error);
-        }
-      };
-      buscarUsuarios();
-    }
-  }, [abrirConfig]);
 
   const handleLogout = () => {
     localStorage.removeItem("usuarioLogado");
@@ -85,8 +68,8 @@ export default function AdminPainel() {
       ...notas.map((n) => [
         n.numero_nota,
         n.status,
-        n.data_registro ? new Date(n.data_registro).toLocaleString("pt-BR", { timeZone: "America/Manaus", hour12: false }) : "",
-        n.data_entrega ? new Date(n.data_entrega).toLocaleString("pt-BR", { timeZone: "America/Manaus", hour12: false }) : "",
+        formatarData(n.data_registro),
+        formatarData(n.data_entrega),
         calcularTempo(n.data_registro, n.data_entrega),
       ])
     ];
@@ -98,58 +81,36 @@ export default function AdminPainel() {
   };
 
   const exportarPDF = () => {
-    try {
-      const doc = new jsPDF();
-      doc.setFontSize(12);
-      doc.text("Relatório de Notas", 14, 15);
-      const tableData = notas.map((n) => [
-        n.numero_nota,
-        n.status,
-        n.data_registro ? new Date(n.data_registro).toLocaleString("pt-BR", { timeZone: "America/Manaus", hour12: false }) : "",
-        n.data_entrega ? new Date(n.data_entrega).toLocaleString("pt-BR", { timeZone: "America/Manaus", hour12: false }) : "",
-        calcularTempo(n.data_registro, n.data_entrega),
-      ]);
-      autoTable(doc, {
-        head: [["Número", "Status", "Hora de Entrada", "Finalizada", "Tempo Total"]],
-        body: tableData,
-        startY: 20,
-      });
-      doc.save(`relatorio_${dataFiltro}.pdf`);
-    } catch (error) {
-      console.error("Erro ao exportar PDF:", error);
-    } finally {
-      setMostrarExportar(false);
-    }
+    const doc = new jsPDF();
+    doc.setFontSize(12);
+    doc.text("Relatório de Notas", 14, 15);
+    const tableData = notas.map((n) => [
+      n.numero_nota,
+      n.status,
+      formatarData(n.data_registro),
+      formatarData(n.data_entrega),
+      calcularTempo(n.data_registro, n.data_entrega),
+    ]);
+    autoTable(doc, {
+      head: [["Número", "Status", "Hora de Entrada", "Finalizada", "Tempo Total"]],
+      body: tableData,
+      startY: 20,
+    });
+    doc.save(`relatorio_${dataFiltro}.pdf`);
+    setMostrarExportar(false);
   };
 
-  const salvarUsuario = async (id) => {
-    try {
-      await api.put(`/api/usuarios/${id}`, editar[id]);
-      alert("Usuário atualizado!");
-    } catch (error) {
-      alert("Erro ao atualizar usuário");
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "FINALIZADA": return "🟢";
-      case "EM ANDAMENTO": return "🟡";
-      case "CONTAINER SENDO OVADO":
-      case "CONTAINER FINALIZADO": return "🔵";
-      case "ATRASADA": return "🔴";
-      default: return "⚪";
-    }
-  };
+  const formatarData = (data) =>
+    data ? new Date(data).toLocaleString("pt-BR", { timeZone: "America/Manaus", hour12: false }) : "";
 
   const getStatusStyle = (status) => {
     switch (status) {
-      case "FINALIZADA": return { color: "#00FF99", fontWeight: "bold" };
-      case "EM ANDAMENTO": return { color: "#FFD700", fontWeight: "bold" };
+      case "FINALIZADA": return "verde";
+      case "EM ANDAMENTO": return "amarelo";
       case "CONTAINER SENDO OVADO":
-      case "CONTAINER FINALIZADO": return { color: "#66ccff", fontWeight: "bold" };
-      case "ATRASADA": return { color: "#FF4444", fontWeight: "bold" };
-      default: return { color: "#ccc" };
+      case "CONTAINER FINALIZADO": return "azul";
+      case "ATRASADA": return "vermelho";
+      default: return "";
     }
   };
 
@@ -169,59 +130,55 @@ export default function AdminPainel() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.topBar}>
-        <h2 style={styles.titulo}>📊 Painel do Administrador</h2>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <button onClick={() => setAbrirConfig(true)} style={styles.botaoConfig}>⚙️</button>
-          <button onClick={handleLogout} style={styles.botaoSair}>Sair</button>
+    <div className="painel-container">
+      <div className="painel-header">
+        <h2>📊 Painel do Administrador</h2>
+        <div className="botoes-header">
+          <button onClick={() => setAbrirConfig(true)}>⚙️</button>
+          <button onClick={handleLogout} className="sair">Sair</button>
         </div>
       </div>
 
-      <div style={styles.filtros}>
-        <input type="date" value={dataFiltro} onChange={(e) => setDataFiltro(e.target.value)} style={styles.inputData} />
-        <input type="text" placeholder="Buscar nº nota" value={buscaNumero} onChange={(e) => setBuscaNumero(e.target.value)} style={styles.inputBusca} />
-
-        <div style={{ position: "relative" }}>
-          <button onClick={() => setMostrarExportar(!mostrarExportar)} style={styles.botaoExportar}>📁 Exportar</button>
+      <div className="filtros">
+        <input type="date" value={dataFiltro} onChange={(e) => setDataFiltro(e.target.value)} />
+        <input type="text" placeholder="Buscar nº nota" value={buscaNumero} onChange={(e) => setBuscaNumero(e.target.value)} />
+        <div className="exportar-container">
+          <button onClick={() => setMostrarExportar(!mostrarExportar)}>📁 Exportar</button>
           {mostrarExportar && (
-            <div style={styles.menuExportar}>
-              <button onClick={exportarPDF} style={styles.itemExportar}>📄 PDF</button>
-              <button onClick={exportarExcel} style={styles.itemExportar}>📊 Excel</button>
+            <div className="exportar-opcoes">
+              <button onClick={exportarPDF}>📄 PDF</button>
+              <button onClick={exportarExcel}>📊 Excel</button>
             </div>
           )}
         </div>
       </div>
 
-      <div style={styles.resumo}>
-        <span>Total: {statusResumo.total}</span>
-        <span> | EM ANDAMENTO: {statusResumo["EM ANDAMENTO"] || 0}</span>
-        <span> | CONTAINER: {(statusResumo["CONTAINER SENDO OVADO"] || 0) + (statusResumo["CONTAINER FINALIZADO"] || 0)}</span>
-        <span> | FINALIZADAS: {statusResumo["FINALIZADA"] || 0}</span>
+      <div className="resumo">
+        Total: {statusResumo.total} | EM ANDAMENTO: {statusResumo["EM ANDAMENTO"] || 0} | CONTAINER: {(statusResumo["CONTAINER SENDO OVADO"] || 0) + (statusResumo["CONTAINER FINALIZADO"] || 0)} | FINALIZADAS: {statusResumo["FINALIZADA"] || 0}
       </div>
 
       {carregando ? (
-        <p style={styles.info}>Carregando notas...</p>
+        <p className="info">Carregando notas...</p>
       ) : (
-        <div style={styles.tabelaWrapper}>
-          <table style={styles.tabela}>
+        <div className="tabela-wrapper">
+          <table>
             <thead>
               <tr>
-                <th style={styles.th}>Número</th>
-                <th style={styles.th}>Status</th>
-                <th style={styles.th}>Hora de Entrada</th>
-                <th style={styles.th}>Finalizada</th>
-                <th style={styles.th} onClick={() => setOrdenarPor("tempo")}>Tempo Total</th>
+                <th>Número</th>
+                <th>Status</th>
+                <th>Hora de Entrada</th>
+                <th>Finalizada</th>
+                <th onClick={() => setOrdenarPor("tempo")}>Tempo Total</th>
               </tr>
             </thead>
             <tbody>
               {[...notas].sort(ordenarNotas).map((nota) => (
                 <tr key={nota.id}>
-                  <td style={styles.td}>{nota.numero_nota}</td>
-                  <td style={{ ...styles.td, ...getStatusStyle(nota.status) }}>{getStatusIcon(nota.status)} {nota.status}</td>
-                  <td style={styles.td}>{nota.data_registro && new Date(nota.data_registro).toLocaleTimeString()}</td>
-                  <td style={styles.td}>{nota.status === "FINALIZADA" && nota.data_entrega ? (<div>{new Date(nota.data_entrega).toLocaleString()}</div>) : (<div style={{ color: "#888" }}>⏳</div>)}</td>
-                  <td style={styles.td}>{calcularTempo(nota.data_registro, nota.data_entrega)}</td>
+                  <td>{nota.numero_nota}</td>
+                  <td className={getStatusStyle(nota.status)}>{nota.status}</td>
+                  <td>{nota.data_registro && new Date(nota.data_registro).toLocaleTimeString()}</td>
+                  <td>{nota.status === "FINALIZADA" && nota.data_entrega ? new Date(nota.data_entrega).toLocaleString() : "⏳"}</td>
+                  <td>{calcularTempo(nota.data_registro, nota.data_entrega)}</td>
                 </tr>
               ))}
             </tbody>
@@ -229,60 +186,7 @@ export default function AdminPainel() {
         </div>
       )}
 
-      {abrirConfig && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modal}>
-            <h3>Editar Usuários</h3>
-            <button onClick={() => setAbrirConfig(false)} style={styles.botaoFechar}>X</button>
-            <div>
-              {usuarios.map((usuario) => (
-                <div key={usuario.id} style={{ marginBottom: "12px" }}>
-                  <input
-                    type="text"
-                    value={editar[usuario.id]?.nome || usuario.nome}
-                    onChange={(e) =>
-                      setEditar({ ...editar, [usuario.id]: { ...editar[usuario.id], nome: e.target.value } })
-                    }
-                    placeholder="Nome"
-                    style={{ marginRight: "10px" }}
-                  />
-                  <input
-                    type="password"
-                    placeholder="Nova Senha"
-                    onChange={(e) =>
-                      setEditar({ ...editar, [usuario.id]: { ...editar[usuario.id], senha: e.target.value } })
-                    }
-                  />
-                  <button onClick={() => salvarUsuario(usuario.id)} style={{ marginLeft: "10px" }}>Salvar</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      {abrirConfig && <ModalUsuarios aberto={abrirConfig} aoFechar={() => setAbrirConfig(false)} />}
     </div>
   );
 }
-
-const styles = {
-  container: { padding: "30px", backgroundColor: "#111", color: "#fff", minHeight: "100vh" },
-  topBar: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" },
-  titulo: { fontSize: "28px", color: "#FFD700", textTransform: "uppercase" },
-  botaoSair: { padding: "8px 14px", backgroundColor: "#e60000", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "bold", cursor: "pointer" },
-  botaoConfig: { padding: "8px 14px", backgroundColor: "#FFD700", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" },
-  filtros: { display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" },
-  inputData: { padding: "8px", fontSize: "16px", borderRadius: "6px" },
-  inputBusca: { padding: "8px", fontSize: "16px", borderRadius: "6px" },
-  botaoExportar: { padding: "8px 14px", backgroundColor: "#FFD700", color: "#000", fontWeight: "bold", border: "none", borderRadius: "6px", cursor: "pointer" },
-  menuExportar: { position: "absolute", top: "40px", right: 0, background: "#222", border: "1px solid #444", borderRadius: "8px", zIndex: 10 },
-  itemExportar: { padding: "10px 16px", display: "block", background: "none", color: "#fff", border: "none", cursor: "pointer", width: "100%", textAlign: "left" },
-  resumo: { marginBottom: "16px", fontSize: "16px", color: "#ccc", textAlign: "center" },
-  info: { color: "#ccc", textAlign: "center" },
-  tabelaWrapper: { overflowX: "auto" },
-  tabela: { width: "100%", borderCollapse: "collapse", backgroundColor: "#1e1e1e", borderRadius: "10px", overflow: "hidden" },
-  th: { padding: "12px", backgroundColor: "#222", color: "#FFD700", fontWeight: "bold", borderBottom: "2px solid #444", textAlign: "left" },
-  td: { padding: "10px", borderBottom: "1px solid #333", textAlign: "left" },
-  modalOverlay: { position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.6)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 999 },
-  modal: { backgroundColor: "#fff", color: "#000", padding: "20px", borderRadius: "8px", width: "90%", maxWidth: "500px", position: "relative" },
-  botaoFechar: { position: "absolute", top: "10px", right: "10px", background: "none", border: "none", fontSize: "16px", cursor: "pointer" }
-};

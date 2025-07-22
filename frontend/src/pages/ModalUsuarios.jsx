@@ -8,14 +8,17 @@ export default function ModalUsuarios({ aberto, aoFechar }) {
 
   useEffect(() => {
     if (aberto) {
-      api.get("/api/usuarios").then((res) => setUsuarios(res.data)).catch(console.error);
+      api.get("/api/usuarios")
+        .then((res) => setUsuarios(res.data))
+        .catch(console.error);
     }
   }, [aberto]);
 
   const salvar = async (id) => {
     setSalvando(true);
     try {
-      await api.put(`/api/usuarios/${id}`, editando[id]);
+      const dados = editando[id];
+      await api.put(`/api/usuarios/${id}`, dados);
       alert("Usuário atualizado com sucesso!");
     } catch (err) {
       alert("Erro ao atualizar usuário");
@@ -33,39 +36,54 @@ export default function ModalUsuarios({ aberto, aoFechar }) {
         <table style={estilos.tabela}>
           <thead>
             <tr>
-              <th>Código</th>
-              <th>Usuário</th>
-              <th>Senha</th>
-              <th>Ações</th>
+              <th style={estilos.th}>Código</th>
+              <th style={estilos.th}>Usuário</th>
+              <th style={estilos.th}>Senha</th>
+              <th style={estilos.th}>Ações</th>
             </tr>
           </thead>
           <tbody>
             {usuarios.map((u) => (
               <tr key={u.id}>
-                <td>{u.id}</td>
-                <td>
+                <td style={estilos.td}>{u.id}</td>
+                <td style={estilos.td}>
                   <input
-                    value={editando[u.id]?.nome || u.nome}
-                    onChange={(e) => setEditando({
-                      ...editando,
-                      [u.id]: { ...editando[u.id], nome: e.target.value },
-                    })}
+                    value={editando[u.id]?.usuario ?? u.usuario}
+                    onChange={(e) =>
+                      setEditando((prev) => ({
+                        ...prev,
+                        [u.id]: {
+                          ...prev[u.id],
+                          usuario: e.target.value,
+                        },
+                      }))
+                    }
                     style={estilos.input}
                   />
                 </td>
-                <td>
+                <td style={estilos.td}>
                   <input
                     type="password"
-                    value={editando[u.id]?.senha || ""}
-                    onChange={(e) => setEditando({
-                      ...editando,
-                      [u.id]: { ...editando[u.id], senha: e.target.value },
-                    })}
+                    placeholder="Nova senha"
+                    value={editando[u.id]?.senha ?? ""}
+                    onChange={(e) =>
+                      setEditando((prev) => ({
+                        ...prev,
+                        [u.id]: {
+                          ...prev[u.id],
+                          senha: e.target.value,
+                        },
+                      }))
+                    }
                     style={estilos.input}
                   />
                 </td>
-                <td>
-                  <button onClick={() => salvar(u.id)} disabled={salvando} style={estilos.botao}>
+                <td style={estilos.td}>
+                  <button
+                    onClick={() => salvar(u.id)}
+                    disabled={salvando}
+                    style={estilos.botao}
+                  >
                     Salvar
                   </button>
                 </td>
@@ -99,17 +117,25 @@ const estilos = {
     minWidth: 500,
     maxHeight: "80vh",
     overflowY: "auto",
-    color: "#fff"
+    color: "#fff",
   },
   titulo: {
     color: "#FFD700",
-    marginBottom: 10,
+    marginBottom: 16,
     textAlign: "center",
   },
   tabela: {
     width: "100%",
     borderCollapse: "collapse",
     marginBottom: 20,
+  },
+  th: {
+    color: "#FFD700",
+    textAlign: "left",
+    paddingBottom: 8,
+  },
+  td: {
+    padding: "6px 0",
   },
   input: {
     width: "100%",
