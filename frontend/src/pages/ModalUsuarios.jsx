@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import api from "../services/api";
 import ModalEditarUsuario from "./ModalEditarUsuario";
+import api from "../services/api";
 
 export default function ModalUsuarios({ aberto, aoFechar }) {
   const [usuarios, setUsuarios] = useState([]);
@@ -8,26 +8,16 @@ export default function ModalUsuarios({ aberto, aoFechar }) {
 
   useEffect(() => {
     if (aberto) {
-      api.get("/api/usuarios")
-        .then((res) => setUsuarios(res.data))
-        .catch(console.error);
+      api.get("/api/usuarios").then((res) => setUsuarios(res.data)).catch(console.error);
     }
   }, [aberto]);
-
-  const abrirEditar = (usuario) => {
-    setUsuarioSelecionado(usuario);
-  };
-
-  const fecharEditar = () => {
-    setUsuarioSelecionado(null);
-  };
 
   const atualizarLista = async () => {
     try {
       const res = await api.get("/api/usuarios");
       setUsuarios(res.data);
-    } catch (err) {
-      console.error("Erro ao atualizar lista de usuários");
+    } catch (error) {
+      console.error("Erro ao atualizar lista de usuários:", error);
     }
   };
 
@@ -37,35 +27,43 @@ export default function ModalUsuarios({ aberto, aoFechar }) {
     <div style={estilos.overlay}>
       <div style={estilos.modal}>
         <h2 style={estilos.titulo}>Usuários</h2>
-        <table style={estilos.tabela}>
-          <thead>
-            <tr>
-              <th>Código</th>
-              <th>Usuário</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usuarios.map((u) => (
-              <tr key={u.id}>
-                <td>{u.id}</td>
-                <td>{u.usuario}</td>
-                <td>
-                  <button onClick={() => abrirEditar(u)} style={estilos.botaoEditar}>Editar</button>
-                </td>
+        <div style={estilos.scroll}>
+          <table style={estilos.tabela}>
+            <thead>
+              <tr>
+                <th style={estilos.th}>Código</th>
+                <th style={estilos.th}>Usuário</th>
+                <th style={estilos.th}>Ações</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        <button onClick={aoFechar} style={estilos.fechar}>Fechar</button>
+            </thead>
+            <tbody>
+              {usuarios.map((u) => (
+                <tr key={u.id}>
+                  <td style={estilos.td}>{u.id}</td>
+                  <td style={estilos.td}>{u.usuario}</td>
+                  <td style={estilos.td}>
+                    <button style={estilos.botaoEditar} onClick={() => setUsuarioSelecionado(u)}>
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <button style={estilos.botaoFechar} onClick={aoFechar}>Fechar</button>
+
+        {usuarioSelecionado && (
+          <ModalEditarUsuario
+            usuario={usuarioSelecionado}
+            aoFechar={() => setUsuarioSelecionado(null)}
+            aoSalvar={() => {
+              setUsuarioSelecionado(null);
+              atualizarLista();
+            }}
+          />
+        )}
       </div>
-      {usuarioSelecionado && (
-        <ModalEditarUsuario
-          usuario={usuarioSelecionado}
-          aoFechar={fecharEditar}
-          aoSalvar={atualizarLista}
-        />
-      )}
     </div>
   );
 }
@@ -82,42 +80,60 @@ const estilos = {
     alignItems: "center",
     justifyContent: "center",
     zIndex: 9999,
+    padding: "10px",
   },
   modal: {
     background: "#222",
-    padding: 20,
-    borderRadius: 10,
-    minWidth: 500,
-    maxHeight: "80vh",
-    overflowY: "auto",
+    padding: "20px",
+    borderRadius: "10px",
     color: "#fff",
+    width: "100%",
+    maxWidth: "600px",
+    boxSizing: "border-box",
   },
   titulo: {
     color: "#FFD700",
-    marginBottom: 10,
+    marginBottom: "16px",
     textAlign: "center",
+    fontSize: "20px",
+  },
+  scroll: {
+    overflowX: "auto",
   },
   tabela: {
     width: "100%",
     borderCollapse: "collapse",
-    marginBottom: 20,
+    marginBottom: "16px",
+  },
+  th: {
+    padding: "8px",
+    backgroundColor: "#333",
+    color: "#FFD700",
+    borderBottom: "1px solid #555",
+    textAlign: "left",
+  },
+  td: {
+    padding: "8px",
+    borderBottom: "1px solid #444",
   },
   botaoEditar: {
     padding: "6px 12px",
     backgroundColor: "#28a745",
     color: "#fff",
     border: "none",
-    borderRadius: 4,
+    borderRadius: "6px",
     cursor: "pointer",
+    width: "100%",
   },
-  fechar: {
+  botaoFechar: {
     backgroundColor: "#e60000",
     color: "#fff",
     border: "none",
-    padding: "8px 16px",
-    borderRadius: 6,
+    padding: "10px 20px",
+    borderRadius: "8px",
     cursor: "pointer",
     display: "block",
     margin: "0 auto",
+    fontWeight: "bold",
   },
 };

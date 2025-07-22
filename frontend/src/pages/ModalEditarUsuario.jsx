@@ -1,28 +1,24 @@
 import { useState } from "react";
 import api from "../services/api";
 
-export default function ModalEditarUsuario({ usuario, aoFechar, aoAtualizar }) {
-  const [novoUsuario, setNovoUsuario] = useState(usuario.usuario || "");
-  const [novaSenha, setNovaSenha] = useState("");
+export default function ModalEditarUsuario({ usuario, aoFechar, aoSalvar }) {
+  const [form, setForm] = useState({
+    usuario: usuario.usuario || "",
+    senha: "",
+  });
   const [salvando, setSalvando] = useState(false);
 
-  const salvar = async () => {
-    if (!novoUsuario.trim()) {
-      alert("Usuário não pode estar em branco");
-      return;
-    }
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
+  const salvar = async () => {
     setSalvando(true);
     try {
-      await api.put(`/api/usuarios/${usuario.id}`, {
-        usuario: novoUsuario,
-        senha: novaSenha || undefined,
-      });
+      await api.put(`/api/usuarios/${usuario.id}`, form);
       alert("Usuário atualizado com sucesso!");
-      aoAtualizar(); // Recarrega lista no modal pai
-      aoFechar();    // Fecha o modal
-    } catch (error) {
-      console.error("Erro ao atualizar usuário:", error);
+      aoSalvar();
+    } catch (err) {
       alert("Erro ao atualizar usuário");
     } finally {
       setSalvando(false);
@@ -34,23 +30,31 @@ export default function ModalEditarUsuario({ usuario, aoFechar, aoAtualizar }) {
       <div style={estilos.modal}>
         <h3 style={estilos.titulo}>Editar Usuário</h3>
 
-        <label style={estilos.label}>Usuário</label>
-        <input
-          value={novoUsuario}
-          onChange={(e) => setNovoUsuario(e.target.value)}
-          style={estilos.input}
-        />
+        <div style={estilos.campo}>
+          <label style={estilos.label}>Usuário</label>
+          <input
+            name="usuario"
+            value={form.usuario}
+            onChange={handleChange}
+            style={estilos.input}
+          />
+        </div>
 
-        <label style={estilos.label}>Nova Senha</label>
-        <input
-          type="password"
-          value={novaSenha}
-          onChange={(e) => setNovaSenha(e.target.value)}
-          style={estilos.input}
-        />
+        <div style={estilos.campo}>
+          <label style={estilos.label}>Nova Senha</label>
+          <input
+            type="password"
+            name="senha"
+            value={form.senha}
+            onChange={handleChange}
+            style={estilos.input}
+          />
+        </div>
 
         <div style={estilos.botoes}>
-          <button onClick={aoFechar} style={estilos.cancelar}>Cancelar</button>
+          <button onClick={aoFechar} style={estilos.cancelar}>
+            Cancelar
+          </button>
           <button onClick={salvar} disabled={salvando} style={estilos.salvar}>
             {salvando ? "Salvando..." : "Salvar"}
           </button>
@@ -67,59 +71,69 @@ const estilos = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 10000,
+    padding: "10px",
+    zIndex: 9999,
   },
   modal: {
-    background: "#222",
-    padding: 20,
-    borderRadius: 10,
-    width: "320px",
+    backgroundColor: "#222",
+    padding: "20px",
+    borderRadius: "10px",
+    width: "100%",
+    maxWidth: "400px",
     color: "#fff",
-    boxShadow: "0 0 10px #000",
+    boxSizing: "border-box",
   },
   titulo: {
-    color: "#FFD700",
-    marginBottom: 15,
+    marginBottom: "16px",
     textAlign: "center",
+    fontSize: "20px",
+    color: "#FFD700",
+  },
+  campo: {
+    marginBottom: "16px",
   },
   label: {
     display: "block",
-    marginTop: 10,
-    marginBottom: 4,
+    marginBottom: "6px",
     color: "#ccc",
-    fontWeight: "bold",
   },
   input: {
     width: "100%",
     padding: "8px",
+    borderRadius: "6px",
+    border: "1px solid #555",
     backgroundColor: "#333",
     color: "#fff",
-    border: "1px solid #555",
-    borderRadius: 4,
+    boxSizing: "border-box",
   },
   botoes: {
-    marginTop: 20,
     display: "flex",
     justifyContent: "space-between",
-  },
-  salvar: {
-    backgroundColor: "#28a745",
-    color: "#fff",
-    padding: "8px 16px",
-    border: "none",
-    borderRadius: 6,
-    cursor: "pointer",
+    gap: "10px",
+    flexWrap: "wrap",
   },
   cancelar: {
     backgroundColor: "#e60000",
     color: "#fff",
-    padding: "8px 16px",
+    padding: "10px 16px",
     border: "none",
-    borderRadius: 6,
+    borderRadius: "6px",
     cursor: "pointer",
+    flex: 1,
+    minWidth: "45%",
+  },
+  salvar: {
+    backgroundColor: "#28a745",
+    color: "#fff",
+    padding: "10px 16px",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+    flex: 1,
+    minWidth: "45%",
   },
 };
