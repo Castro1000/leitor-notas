@@ -70,14 +70,13 @@ export default function AdminPainel() {
 
   const exportarExcel = () => {
     const wsData = [
-      ["Número", "Status", "Hora de Entrada", "Finalizada", "Tempo Total", "Usuário"],
+      ["Número", "Status", "Hora de Entrada", "Finalizada", "Tempo Total"],
       ...notas.map((n) => [
         n.numero_nota,
         mapearStatus(n.status),
         formatarData(n.data_registro),
         formatarData(n.data_entrega),
         calcularTempo(n.data_registro, n.data_entrega),
-        mapearUsuario(n.usuario),
       ])
     ];
     const wb = XLSX.utils.book_new();
@@ -97,10 +96,9 @@ export default function AdminPainel() {
       formatarData(n.data_registro),
       formatarData(n.data_entrega),
       calcularTempo(n.data_registro, n.data_entrega),
-      mapearUsuario(n.usuario),
     ]);
     autoTable(doc, {
-      head: [["Número", "Status", "Hora de Entrada", "Finalizada", "Tempo Total", "Usuário"]],
+      head: [["Número", "Status", "Hora de Entrada", "Finalizada", "Tempo Total"]],
       body: tableData,
       startY: 20,
     });
@@ -116,17 +114,6 @@ export default function AdminPainel() {
       case "CONTAINER SENDO OVADO": return "NF-e sendo carregada";
       case "CONTAINER FINALIZADO": return "NF-e CARREGADA NO VEÍCULO";
       default: return status;
-    }
-  };
-
-  const mapearUsuario = (usuario) => {
-    switch (usuario) {
-      case "operador":
-      case "operador2": return "Operador";
-      case "validador": return "Validador";
-      case "licenciador": return "Licenciador";
-      case "administrador": return "Administrador";
-      default: return usuario;
     }
   };
 
@@ -196,7 +183,6 @@ export default function AdminPainel() {
                 <th>Hora de Entrada</th>
                 <th>Finalizada</th>
                 <th onClick={() => setOrdenarPor("tempo")}>Tempo Total</th>
-                <th>Usuário</th>
               </tr>
             </thead>
             <tbody>
@@ -207,7 +193,6 @@ export default function AdminPainel() {
                   <td>{nota.data_registro && new Date(nota.data_registro).toLocaleTimeString()}</td>
                   <td>{nota.status === "FINALIZADA" && nota.data_entrega ? new Date(nota.data_entrega).toLocaleString() : "⏳"}</td>
                   <td>{calcularTempo(nota.data_registro, nota.data_entrega)}</td>
-                  <td>{mapearUsuario(nota.usuario)}</td>
                 </tr>
               ))}
             </tbody>
