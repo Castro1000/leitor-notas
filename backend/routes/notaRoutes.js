@@ -25,6 +25,7 @@ router.post('/gravar-nota', autenticarToken, async (req, res) => {
   } = req.body;
 
   const usuario_logado = req.usuario.usuario;
+  const isOperador = usuario_logado === 'operador' || usuario_logado === 'operador2';
 
   try {
     const [existente] = await db.query(
@@ -37,11 +38,11 @@ router.post('/gravar-nota', autenticarToken, async (req, res) => {
     if (existente.length > 0) {
       const nota = existente[0];
 
-      if (usuario_logado === 'operador') {
+      if (isOperador) {
         if (nota.status === 'EM ANDAMENTO') {
           await db.query(
             'UPDATE notas_fiscais SET status = ?, usuario = ?, data_logistica = ? WHERE id = ?',
-            ['CONTAINER SENDO OVADO', 'operador', dataAtual, nota.id]
+            ['CONTAINER SENDO OVADO', usuario_logado, dataAtual, nota.id]
           );
           const [atualizada] = await db.query('SELECT * FROM notas_fiscais WHERE id = ?', [nota.id]);
           return res.json({ message: 'Status atualizado', status: 'CONTAINER SENDO OVADO', nota: atualizada[0] });
@@ -103,8 +104,9 @@ router.post('/gravar-nota', autenticarToken, async (req, res) => {
 router.put('/finalizar-container/:id', autenticarToken, async (req, res) => {
   const { id } = req.params;
   const usuario_logado = req.usuario.usuario;
+  const isOperador = usuario_logado === 'operador' || usuario_logado === 'operador2';
 
-  if (usuario_logado !== 'operador') {
+  if (!isOperador) {
     return res.status(403).json({ message: 'Usuário não autorizado a finalizar o container.' });
   }
 

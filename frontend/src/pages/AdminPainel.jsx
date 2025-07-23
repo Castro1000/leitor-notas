@@ -11,19 +11,17 @@ export default function AdminPainel() {
   const [notas, setNotas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [dataFiltro, setDataFiltro] = useState(() => {
-  const hojeManaus = new Date().toLocaleDateString("pt-BR", {
-        timeZone: "America/Manaus",
-      }).split("/").reverse().join("-");
-      return hojeManaus;
-    });
+    const hojeManaus = new Date().toLocaleDateString("pt-BR", {
+      timeZone: "America/Manaus",
+    }).split("/").reverse().join("-");
+    return hojeManaus;
+  });
 
   const [ordenarPor, setOrdenarPor] = useState("data_registro");
   const [buscaNumero, setBuscaNumero] = useState("");
   const [mostrarExportar, setMostrarExportar] = useState(false);
   const [abrirConfig, setAbrirConfig] = useState(false);
   const navigate = useNavigate();
-
-  
 
   useEffect(() => {
     const buscarNotas = async () => {
@@ -72,13 +70,14 @@ export default function AdminPainel() {
 
   const exportarExcel = () => {
     const wsData = [
-      ["Número", "Status", "Hora de Entrada", "Finalizada", "Tempo Total"],
+      ["Número", "Status", "Hora de Entrada", "Finalizada", "Tempo Total", "Usuário"],
       ...notas.map((n) => [
         n.numero_nota,
-        n.status,
+        mapearStatus(n.status),
         formatarData(n.data_registro),
         formatarData(n.data_entrega),
         calcularTempo(n.data_registro, n.data_entrega),
+        mapearUsuario(n.usuario),
       ])
     ];
     const wb = XLSX.utils.book_new();
@@ -94,13 +93,14 @@ export default function AdminPainel() {
     doc.text("Relatório de Notas", 14, 15);
     const tableData = notas.map((n) => [
       n.numero_nota,
-      n.status,
+      mapearStatus(n.status),
       formatarData(n.data_registro),
       formatarData(n.data_entrega),
       calcularTempo(n.data_registro, n.data_entrega),
+      mapearUsuario(n.usuario),
     ]);
     autoTable(doc, {
-      head: [["Número", "Status", "Hora de Entrada", "Finalizada", "Tempo Total"]],
+      head: [["Número", "Status", "Hora de Entrada", "Finalizada", "Tempo Total", "Usuário"]],
       body: tableData,
       startY: 20,
     });
@@ -110,6 +110,25 @@ export default function AdminPainel() {
 
   const formatarData = (data) =>
     data ? new Date(data).toLocaleString("pt-BR", { timeZone: "America/Manaus", hour12: false }) : "";
+
+  const mapearStatus = (status) => {
+    switch (status) {
+      case "CONTAINER SENDO OVADO": return "NF-e sendo carregada";
+      case "CONTAINER FINALIZADO": return "NF-e CARREGADA NO VEÍCULO";
+      default: return status;
+    }
+  };
+
+  const mapearUsuario = (usuario) => {
+    switch (usuario) {
+      case "operador":
+      case "operador2": return "Operador";
+      case "validador": return "Validador";
+      case "licenciador": return "Licenciador";
+      case "administrador": return "Administrador";
+      default: return usuario;
+    }
+  };
 
   const getStatusStyle = (status) => {
     switch (status) {
@@ -137,8 +156,6 @@ export default function AdminPainel() {
     return new Date(b[ordenarPor]) - new Date(a[ordenarPor]);
   };
 
-  console.log("abrirConfig:", abrirConfig);
-
   return (
     <div className="painel-container">
       <div className="painel-header">
@@ -153,7 +170,7 @@ export default function AdminPainel() {
         <input type="date" value={dataFiltro} onChange={(e) => setDataFiltro(e.target.value)} />
         <input type="text" placeholder="Buscar nº nota" value={buscaNumero} onChange={(e) => setBuscaNumero(e.target.value)} />
         <div className="exportar-container">
-          <button  onClick={() => setMostrarExportar(!mostrarExportar)}>📁 Exportar</button>
+          <button onClick={() => setMostrarExportar(!mostrarExportar)}>📁 Exportar</button>
           {mostrarExportar && (
             <div className="exportar-opcoes">
               <button onClick={exportarPDF}>📄 PDF</button>
@@ -179,16 +196,18 @@ export default function AdminPainel() {
                 <th>Hora de Entrada</th>
                 <th>Finalizada</th>
                 <th onClick={() => setOrdenarPor("tempo")}>Tempo Total</th>
+                <th>Usuário</th>
               </tr>
             </thead>
             <tbody>
               {[...notas].sort(ordenarNotas).map((nota) => (
                 <tr key={nota.id}>
                   <td>{nota.numero_nota}</td>
-                  <td className={getStatusStyle(nota.status)}>{nota.status}</td>
+                  <td className={getStatusStyle(nota.status)}>{mapearStatus(nota.status)}</td>
                   <td>{nota.data_registro && new Date(nota.data_registro).toLocaleTimeString()}</td>
                   <td>{nota.status === "FINALIZADA" && nota.data_entrega ? new Date(nota.data_entrega).toLocaleString() : "⏳"}</td>
                   <td>{calcularTempo(nota.data_registro, nota.data_entrega)}</td>
+                  <td>{mapearUsuario(nota.usuario)}</td>
                 </tr>
               ))}
             </tbody>
