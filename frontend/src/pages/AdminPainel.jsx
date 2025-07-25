@@ -188,12 +188,13 @@ export default function AdminPainel() {
             <tbody>
               {[...notas].sort(ordenarNotas).map((nota) => (
                 <tr key={nota.id}>
-                  <td>{nota.numero_nota}</td>
+                  <td>{String(nota.numero_nota).replace(/^0+/, '').slice(0, 5)}</td>
                   <td className={getStatusStyle(nota.status)}>{mapearStatus(nota.status)}</td>
                   <td>{nota.data_registro && new Date(nota.data_registro).toLocaleTimeString()}</td>
                   <td>{nota.status === "FINALIZADA" && nota.data_entrega ? new Date(nota.data_entrega).toLocaleString() : "⏳"}</td>
                   <td>{calcularTempo(nota.data_registro, nota.data_entrega)}</td>
-                </tr>
+              </tr>
+
               ))}
             </tbody>
           </table>
