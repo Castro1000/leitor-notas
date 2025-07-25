@@ -29,10 +29,7 @@ export default function LeitorNota() {
   };
 
   const processarChave = async (chave) => {
-    const numeroNota = chave.slice(24, 33).replace(/^0+/, '');
-    console.log("Número extraído:", numeroNota);
-
-
+    const numeroNota = chave.slice(34, 38).replace(/^0+/, '');
 
     try {
       const { data } = await api.post("/api/gravar-nota", {
