@@ -1,9 +1,7 @@
-LeitorNota.jsx
-
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import ScannerCamera from "./ScannerCamera";
 import api from "../services/api";
+import ScannerCamera from "./ScannerCamera";
 
 export default function LeitorNota() {
   const inputRef = useRef();
@@ -13,13 +11,13 @@ export default function LeitorNota() {
   const [nota, setNota] = useState(null);
   const [status, setStatus] = useState("");
   const [mostrarBotaoFinalizarPH, setMostrarBotaoFinalizarPH] = useState(false);
-  const [mostrarBotaoFinalizarContainer, setMostrarBotaoFinalizarContainer] =
-    useState(false);
+  const [mostrarBotaoFinalizarContainer, setMostrarBotaoFinalizarContainer] = useState(false);
   const [scannerAberto, setScannerAberto] = useState(false);
   const navigate = useNavigate();
-  const usuario =
-    JSON.parse(localStorage.getItem("usuarioLogado"))?.usuario || "";
+  const usuario = JSON.parse(localStorage.getItem("usuarioLogado"))?.usuario || "";
   const bip = new Audio("/beep.mp3");
+
+  const isOperador = usuario === "operador" || usuario === "operador2";
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -54,29 +52,19 @@ export default function LeitorNota() {
       setStatus(data.status);
 
       if (data.status === "EM ANDAMENTO") {
-        setMensagem(
-          `✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`
-        );
-        setMensagemFluxo("🟡 Aguardando setor de LOGÍSTICA bipar a nota.");
+        setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
+        setMensagemFluxo("🟡 Aguardando OPERADOR bipar a nota.");
       } else if (data.status === "CONTAINER SENDO OVADO") {
-        setMensagem(
-          `✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`
-        );
-        setMensagemFluxo("🔵 Aguardando LOGÍSTICA finalizar container.");
-        if (usuario === "logistica") setMostrarBotaoFinalizarContainer(true);
+        setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
+        setMensagemFluxo("🔵 Aguardando OPERADOR finalizar NF-e.");
+        if (isOperador) setMostrarBotaoFinalizarContainer(true);
       } else if (data.status === "CONTAINER FINALIZADO") {
-        setMensagem(
-          `✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`
-        );
-        setMensagemFluxo("🔵 Aguardando PH finalizar.");
-        if (usuario === "ph") setMostrarBotaoFinalizarPH(true);
+        setMensagem(`✅ NF-e nº ${numeroNota} foi gravada em ${dataFormatada} às ${horaFormatada}`);
+        setMensagemFluxo("🔵 Aguardando Validador Finalizar processo");
+        if (usuario === "validador") setMostrarBotaoFinalizarPH(true);
       } else if (data.status === "FINALIZADA") {
-        const finalizada = new Date(
-          data.nota?.data_entrega || data.nota?.data_registro
-        );
-        setMensagem(
-          `✅ NF-e nº ${numeroNota} foi FINALIZADA em ${finalizada.toLocaleDateString()} às ${finalizada.toLocaleTimeString()}`
-        );
+        const finalizada = new Date(data.nota?.data_entrega || data.nota?.data_registro);
+        setMensagem(`✅ NF-e nº ${numeroNota} foi FINALIZADA em ${finalizada.toLocaleDateString()} às ${finalizada.toLocaleTimeString()}`);
         setMensagemFluxo("✅ Nota encerrada.");
         setMensagemTipo("finalizada");
       }
@@ -86,40 +74,28 @@ export default function LeitorNota() {
         const notaRecebida = data.nota;
         setNota(notaRecebida);
         setStatus(notaRecebida.status);
-        const finalizada = new Date(
-          notaRecebida?.data_entrega || notaRecebida?.data_registro
-        );
+        const finalizada = new Date(notaRecebida?.data_entrega || notaRecebida?.data_registro);
         const dt = finalizada.toLocaleDateString();
         const hr = finalizada.toLocaleTimeString();
 
         if (notaRecebida.status === "FINALIZADA") {
-          setMensagem(
-            `✅ NF-e nº ${notaRecebida.numero_nota} foi FINALIZADA em ${dt} às ${hr}`
-          );
+          setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi FINALIZADA em ${dt} às ${hr}`);
           setMensagemFluxo("✅ Nota encerrada.");
           setMensagemTipo("finalizada");
         } else if (notaRecebida.status === "CONTAINER FINALIZADO") {
-          setMensagem(
-            `✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`
-          );
-          setMensagemFluxo("🔵 Aguardando PH finalizar.");
-          if (usuario === "ph") setMostrarBotaoFinalizarPH(true);
+          setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
+          setMensagemFluxo("🔵 Aguardando Validador Finalizar processo");
+          if (usuario === "validador") setMostrarBotaoFinalizarPH(true);
         } else if (notaRecebida.status === "CONTAINER SENDO OVADO") {
-          setMensagem(
-            `✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`
-          );
-          setMensagemFluxo("🔵 Aguardando LOGÍSTICA finalizar container.");
-          if (usuario === "logistica") setMostrarBotaoFinalizarContainer(true);
+          setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
+          setMensagemFluxo("🔵 Aguardando OPERADOR finalizar NF-e.");
+          if (isOperador) setMostrarBotaoFinalizarContainer(true);
         } else if (notaRecebida.status === "EM ANDAMENTO") {
-          setMensagem(
-            `✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`
-          );
-          setMensagemFluxo("🟡 Aguardando setor de LOGÍSTICA bipar a nota.");
+          setMensagem(`✅ NF-e nº ${notaRecebida.numero_nota} foi gravada em ${dt} às ${hr}`);
+          setMensagemFluxo("🟡 Aguardando OPERADOR bipar a nota.");
         }
       } else {
-        setMensagem(
-          data?.message ? `⚠️ ${data.message}` : "❌ Erro ao processar a chave"
-        );
+        setMensagem(data?.message ? `⚠️ ${data.message}` : "❌ Erro ao processar a chave");
         setMensagemTipo("erro");
         setMensagemFluxo("");
       }
@@ -140,20 +116,34 @@ export default function LeitorNota() {
 
   const finalizarNota = async () => {
     if (!nota?.id) return;
-    await api.put(`/api/finalizar-nota/${nota.id}`);
-    setStatus("FINALIZADA");
-    setMostrarBotaoFinalizarPH(false);
-    setMensagem("✅ Nota finalizada com sucesso!");
-    setMensagemFluxo("✅ Nota encerrada.");
-    setMensagemTipo("finalizada");
+    try {
+      await api.put(`/api/finalizar-nota/${nota.id}`);
+      setStatus("FINALIZADA");
+      setMostrarBotaoFinalizarPH(false);
+      setMensagem("✅ Nota finalizada com sucesso!");
+      setMensagemFluxo("✅ Nota encerrada.");
+      setMensagemTipo("finalizada");
+    } catch (error) {
+      console.error("Erro ao finalizar nota:", error);
+      setMensagem("❌ Erro ao finalizar nota");
+      setMensagemTipo("erro");
+    }
   };
 
   const finalizarContainer = async () => {
     if (!nota?.id) return;
-    await api.put(`/api/finalizar-container/${nota.id}`);
-    setStatus("CONTAINER FINALIZADO");
-    setMostrarBotaoFinalizarContainer(false);
-    setMensagemFluxo("🔵 Aguardando PH finalizar.");
+    try {
+      await api.put(`/api/finalizar-container/${nota.id}`);
+      setStatus("CONTAINER FINALIZADO");
+      setMostrarBotaoFinalizarContainer(false);
+      setMensagem("📦 NF-e finalizada com sucesso!");
+      setMensagemFluxo("🔵 Aguardando Validador Finalizar processo");
+      setMensagemTipo("info");
+    } catch (error) {
+      console.error("Erro ao finalizar container:", error);
+      setMensagem("❌ Erro ao finalizar a NF-e");
+      setMensagemTipo("erro");
+    }
   };
 
   return (
@@ -171,9 +161,7 @@ export default function LeitorNota() {
       <div style={styles.container}>
         <div style={styles.topBar}>
           <h2 style={{ color: "#FFD700" }}>📦 Leitor de Notas Fiscais</h2>
-          <button onClick={handleLogout} style={styles.logoutButton}>
-            🚪 Sair
-          </button>
+          <button onClick={handleLogout} style={styles.logoutButton}>🚪 Sair</button>
         </div>
         <p>
           <span style={{ color: "#ccc" }}>Usuário:</span>{" "}
@@ -182,27 +170,19 @@ export default function LeitorNota() {
         <input
           ref={inputRef}
           type="text"
-          placeholder="Bipe ou escaneie a nota fiscal"
+          placeholder="Escaneie a nota fiscal"
           onKeyDown={handleLeitura}
           style={styles.input}
         />
-        {/* <button
-          onClick={() => setScannerAberto(true)}
-          style={styles.botaoCamera}
-        >
-          📷 Ler com Câmera
-        </button> */}
 
         {mensagem && (
           <div
             style={{
               ...styles.mensagem,
               backgroundColor:
-                mensagemTipo === "erro"
-                  ? "#800000"
-                  : mensagemTipo === "finalizada"
-                  ? "#004d00"
-                  : "#333",
+                mensagemTipo === "erro" ? "#800000"
+                : mensagemTipo === "finalizada" ? "#004d00"
+                : "#333",
               color: mensagemTipo === "finalizada" ? "#00FF99" : "#FFD700",
             }}
           >
@@ -212,22 +192,28 @@ export default function LeitorNota() {
 
         {mensagemFluxo && <div style={styles.fluxoBox}>{mensagemFluxo}</div>}
 
-        {status && (
-          <div style={styles.statusBox}>
-            <strong>Status:</strong>{" "}
-            <span style={styles.statusTexto}>{status}</span>
-          </div>
-        )}
+    {status && (
+      <div style={styles.statusBox}>
+        <strong>Status:</strong>{" "}
+        <span style={styles.statusTexto}>
+          {{
+            "CONTAINER SENDO OVADO": "NF-e sendo carregada no veículo",
+            "CONTAINER FINALIZADO": "NF-e totalmente carregada no veículo",
+          }[status] || status}
+        </span>
+      </div>
+    )}
 
-        {mostrarBotaoFinalizarPH && usuario === "ph" && (
+
+        {mostrarBotaoFinalizarPH && usuario === "validador" && (
           <button style={styles.botaoFinalizar} onClick={finalizarNota}>
-            ✅ Finalizar Nota
+            ✅ FINALIZAR PROCESSO
           </button>
         )}
 
-        {mostrarBotaoFinalizarContainer && usuario === "logistica" && (
+        {mostrarBotaoFinalizarContainer && isOperador && (
           <button style={styles.botaoFinalizar} onClick={finalizarContainer}>
-            📦 Finalizar Container
+            📦 Finalizar NF-e
           </button>
         )}
       </div>
@@ -272,17 +258,6 @@ const styles = {
     marginTop: "10px",
     backgroundColor: "#393e46",
     color: "#fff",
-  },
-  botaoCamera: {
-    width: "100%",
-    padding: "12px",
-    backgroundColor: "#FFD700",
-    color: "#000",
-    fontWeight: "bold",
-    marginTop: "12px",
-    borderRadius: "10px",
-    fontSize: "16px",
-    cursor: "pointer",
   },
   mensagem: {
     marginTop: "20px",
